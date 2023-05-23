@@ -1,0 +1,293 @@
+// In general, while you can use proto2 (the current default protocol buffers
+// version), we recommend that you use proto3 with gRPC as it lets you use the
+// full range of gRPC-supported languages, as well as avoiding compatibility
+// issues with proto2 clients talking to proto3 servers and vice versa.
+syntax = "proto3";
+
+// The package name determines the name of the directories that truss creates
+// for `package echo;` truss will create the directory "echo-service".
+package swapsvc;
+
+import "github.com/metaverse/truss/deftree/googlethirdparty/annotations.proto";
+
+service Swapsvc {
+
+rpc SyncSwapOrder (SyncSwapOrderRequest) returns (SyncSwapOrderResponse) {
+  option (google.api.http) = {
+    get: "/swap_order/sync"
+    additional_bindings {
+      get: "/swap_order/sync/"
+    }
+  };
+}
+rpc SwapOrderPage (SwapOrderPageRequest) returns (SwapOrderPageResponse) {
+  option (google.api.http) = {
+    get: "/swap_order/page"
+    additional_bindings {
+      get: "/swap_order/page/"
+    }
+  };
+}
+rpc FindSwapOrder (FindSwapOrderRequest) returns (FindSwapOrderResponse) {
+  option (google.api.http) = {
+    get: "/swap_order/find"
+    additional_bindings {
+      get: "/swap_order/find/"
+    }
+  };
+}
+rpc ListSwapToken (ListSwapTokenRequest) returns (ListSwapTokenResponse) {
+  option (google.api.http) = {
+    get: "/swap_token/list"
+    additional_bindings {
+      get: "/swap_token/list/"
+    }
+  };
+}
+
+rpc GetSwapApproveAllowance (GetSwapApproveAllowanceRequest) returns (GetSwapApproveAllowanceResponse) {
+  option (google.api.http) = {
+    get: "/swap/approve/allowance"
+    additional_bindings {
+      get: "/swap/approve/allowance/"
+    }
+  };
+}
+rpc ApproveSwapTransaction (ApproveSwapTransactionRequest) returns (ApproveSwapTransactionResponse) {
+  option (google.api.http) = {
+    get: "/swap/approve/transaction"
+    additional_bindings {
+      get: "/swap/approve/transaction/"
+    }
+  };
+}
+rpc SwapTrades (SwapTradesRequest) returns (SwapTradesResponse) {
+  option (google.api.http) = {
+    get: "/swap/trades"
+    additional_bindings {
+      get: "/swap/trades/"
+    }
+  };
+}
+rpc SwapTrade (SwapTradeRequest) returns (SwapTradeResponse) {
+  option (google.api.http) = {
+    get: "/swap/trade"
+    additional_bindings {
+      get: "/swap/trade/"
+    }
+  };
+}
+rpc SwapQuote (SwapQuoteRequest) returns (SwapQuoteResponse) {
+  option (google.api.http) = {
+    get: "/swap/quote"
+    additional_bindings {
+      get: "/swap/quote/"
+    }
+  };
+}
+
+}
+
+message PageQuick {
+  uint64 limit = 1;
+  string next_id = 2;
+  uint64 total = 3;
+}
+message Page {
+  uint64 total_records = 1;
+  uint64 page_size = 2;
+  uint64 page_num = 3;
+  uint64 total_page = 4;
+}
+
+message TestRequest {
+ 
+}
+message TestResponse {
+  uint64 code = 1;
+}
+message SyncSwapOrderRequest {
+ 
+}
+message SyncSwapOrderResponse {
+  uint64 code = 1;
+}
+message SwapProvider {
+  string key = 1;
+  string name = 2;
+  string logo = 3;
+}
+
+message Token {
+  string address =  1;
+  int32 decimals =  2;
+  string logo_uri =  3;
+  string name =  4;
+  string symbol = 5;
+  string price =  6;
+   string value = 7;
+}
+
+message Transaction {
+  string hash = 1;
+  string gas = 2;
+  int64 block_number = 3;
+  string gas_used = 4;
+  string gas_price = 5;
+  string nonce = 6;
+}
+
+message SwapOrder {
+  string id = 1;
+  uint64 chainID = 2;
+  string from_address = 3;
+  string dest_receiver = 4;
+  int32 receipt_status = 5;
+  Token from_token = 6;
+  Token to_token = 7;
+  SwapProvider provider = 8;
+  string contract_address = 9;
+  int64 block_at = 10;
+  Transaction tx = 11;
+  string transaction_fee = 12;
+  Token native_token = 13;
+}
+
+message SwapOrderPageRequest {
+  uint64 chainID = 1;
+  string from_address = 2;
+  Page paginator = 3;
+}
+
+message SwapOrderPageResponse {
+  uint64 code = 1;
+  repeated SwapOrder data = 2;
+  Page paginator = 3;
+}
+message FindSwapOrderRequest {
+  uint64 chainID = 1;
+  string tx_hash = 2;
+  string from_address = 3;
+}
+
+message FindSwapOrderResponse {
+  uint64 code = 1;
+  SwapOrder data = 2;
+}
+
+message ListSwapTokenRequest {
+  uint64 chainID = 1;
+  string token_address = 2;
+}
+
+message ListSwapTokenResponse {
+  uint64 code = 1;
+  repeated Token data = 2;
+}
+
+message GetSwapApproveAllowanceRequest{
+  uint64 chainID = 1;
+  string token_address = 2;
+  string wallet_address = 3;
+  string aggregator_address = 4;
+}
+
+message GetSwapApproveAllowanceResponse {
+  uint64 code = 1;
+  string allowance = 2;
+}
+
+message ApproveSwapTransactionRequest {
+  uint64 chainID = 1;
+  string token_address = 2;
+  string amount = 3;
+  string aggregator_address = 4;
+}
+
+message ApproveSwapTransactionResponse{
+  uint64 code = 1;
+  string data = 2;
+  string to = 3;
+  string gas_price = 4;
+  string value = 5;
+}
+
+message SwapQuoteRequest {
+  uint64 chainID = 1;
+  string amount = 2;
+  string from_token_address = 3;
+  string to_token_address = 4;
+}
+message SwapQuoteInfo {
+  float fee = 1;
+  string estimate_gas_fee = 2;
+  Aggregator aggregator = 3;
+  string from_token_address = 4;
+  string to_token_address = 5;
+  string from_token_amount = 6;
+  string to_token_amount = 7;
+  string error = 8;
+  int64 fetch_time = 9;
+}
+message SwapQuoteResponse {
+  uint64 code = 1;
+  repeated SwapQuoteInfo data = 2;
+}
+message SwapTradesRequest {
+  uint64 chainID = 1;
+  string amount = 2;
+  string from_token_address = 3;
+  string to_token_address = 4;
+  float slippage = 5;
+  string from_address = 6;
+  string dest_receiver = 7;
+  string aggregator_address = 8;
+}
+message SwapTradeRequest {
+  uint64 chainID = 1;
+  string amount = 2;
+  string from_token_address = 3;
+  string to_token_address = 4;
+  float slippage = 5;
+  string from_address = 6;
+  string dest_receiver = 7;
+  string aggregator_address = 8;
+}
+
+message SwapTradeResponse {
+  float code = 1;
+  SwapTradeInfo data = 2;
+}
+
+message SwapTradeInfo {
+  float fee = 1;
+  Trade trade = 2;
+  Aggregator aggregator = 3;
+  string from_token_address = 4;
+  string to_token_address = 5;
+  string from_token_amount = 6;
+  string to_token_amount = 7;
+  string error = 8;
+  int64 fetch_time = 9;
+}
+
+message SwapTradesResponse {
+  uint64 code = 1;
+  repeated SwapTradeInfo data = 2;
+}
+
+message Trade {
+  string data = 1;
+  string from = 2;
+  string to = 3;
+  string gas_price = 4;
+  string gas_limit = 5;
+  string value = 6;
+}
+
+message Aggregator {
+  string type = 1;
+  string name = 2;
+  string contract_address = 3;
+  string logo = 4;
+}
