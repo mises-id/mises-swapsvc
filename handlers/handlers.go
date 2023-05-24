@@ -69,29 +69,9 @@ func (s swapsvcService) SwapOrderPage(ctx context.Context, in *pb.SwapOrderPageR
 	return &resp, nil
 }
 
-func (s swapsvcService) SwapTrades(ctx context.Context, in *pb.SwapTradesRequest) (*pb.SwapTradesResponse, error) {
-	var resp pb.SwapTradesResponse
-	params := &swap.SwapTradesInput{
-		ChainID:          in.ChainID,
-		FromTokenAddress: in.FromTokenAddress,
-		Amount:           in.Amount,
-		ToTokenAddress:   in.ToTokenAddress,
-		DestReceiver:     in.DestReceiver,
-		FromAddress:      in.FromAddress,
-		Slippage:         in.Slippage,
-	}
-	data, err := swap.SwapTrades(ctx, params)
-	if err != nil {
-		return nil, err
-	}
-	resp.Code = 0
-	resp.Data = buildSwapTradeSlice(data)
-	return &resp, nil
-}
-
 func (s swapsvcService) SwapTrade(ctx context.Context, in *pb.SwapTradeRequest) (*pb.SwapTradeResponse, error) {
 	var resp pb.SwapTradeResponse
-	params := &swap.SwapTradesInput{
+	params := &swap.SwapTradeInput{
 		ChainID:           in.ChainID,
 		FromTokenAddress:  in.FromTokenAddress,
 		Amount:            in.Amount,
@@ -108,14 +88,6 @@ func (s swapsvcService) SwapTrade(ctx context.Context, in *pb.SwapTradeRequest) 
 	resp.Code = 0
 	resp.Data = buildSwapTradeInfo(data)
 	return &resp, nil
-}
-
-func buildSwapTradeSlice(data []*swap.SwapTradeInfo) []*pb.SwapTradeInfo {
-	result := make([]*pb.SwapTradeInfo, len(data))
-	for i, v := range data {
-		result[i] = buildSwapTradeInfo(v)
-	}
-	return result
 }
 
 func buildSwapTradeInfo(data *swap.SwapTradeInfo) *pb.SwapTradeInfo {
@@ -255,4 +227,14 @@ func buildSwapQuoteInfo(data *swap.SwapQuoteInfo) *pb.SwapQuoteInfo {
 		}
 	}
 	return resp
+}
+
+func (s swapsvcService) Test(ctx context.Context, in *pb.TestRequest) (*pb.TestResponse, error) {
+	var resp pb.TestResponse
+	err := swap.InitSwap(ctx)
+	if err != nil {
+		return nil, err
+	}
+	resp.Code = 0
+	return &resp, nil
 }

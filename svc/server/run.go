@@ -59,9 +59,9 @@ func NewEndpoints(service pb.SwapsvcServer) svc.Endpoints {
 		listswaptokenEndpoint           = svc.MakeListSwapTokenEndpoint(service)
 		getswapapproveallowanceEndpoint = svc.MakeGetSwapApproveAllowanceEndpoint(service)
 		approveswaptransactionEndpoint  = svc.MakeApproveSwapTransactionEndpoint(service)
-		swaptradesEndpoint              = svc.MakeSwapTradesEndpoint(service)
 		swaptradeEndpoint               = svc.MakeSwapTradeEndpoint(service)
 		swapquoteEndpoint               = svc.MakeSwapQuoteEndpoint(service)
+		testEndpoint                    = svc.MakeTestEndpoint(service)
 	)
 
 	endpoints := svc.Endpoints{
@@ -71,9 +71,9 @@ func NewEndpoints(service pb.SwapsvcServer) svc.Endpoints {
 		ListSwapTokenEndpoint:           listswaptokenEndpoint,
 		GetSwapApproveAllowanceEndpoint: getswapapproveallowanceEndpoint,
 		ApproveSwapTransactionEndpoint:  approveswaptransactionEndpoint,
-		SwapTradesEndpoint:              swaptradesEndpoint,
 		SwapTradeEndpoint:               swaptradeEndpoint,
 		SwapQuoteEndpoint:               swapquoteEndpoint,
+		TestEndpoint:                    testEndpoint,
 	}
 
 	// Wrap selected Endpoints with middlewares. See handlers/middlewares.go

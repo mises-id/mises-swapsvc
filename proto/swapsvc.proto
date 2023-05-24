@@ -61,14 +61,6 @@ rpc ApproveSwapTransaction (ApproveSwapTransactionRequest) returns (ApproveSwapT
     }
   };
 }
-rpc SwapTrades (SwapTradesRequest) returns (SwapTradesResponse) {
-  option (google.api.http) = {
-    get: "/swap/trades"
-    additional_bindings {
-      get: "/swap/trades/"
-    }
-  };
-}
 rpc SwapTrade (SwapTradeRequest) returns (SwapTradeResponse) {
   option (google.api.http) = {
     get: "/swap/trade"
@@ -82,6 +74,14 @@ rpc SwapQuote (SwapQuoteRequest) returns (SwapQuoteResponse) {
     get: "/swap/quote"
     additional_bindings {
       get: "/swap/quote/"
+    }
+  };
+}
+rpc Test (TestRequest) returns (TestResponse) {
+  option (google.api.http) = {
+    get: "/test"
+    additional_bindings {
+      get: "/test/"
     }
   };
 }
@@ -101,7 +101,7 @@ message Page {
 }
 
 message TestRequest {
- 
+ string type = 1;
 }
 message TestResponse {
   uint64 code = 1;

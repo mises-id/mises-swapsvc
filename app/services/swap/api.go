@@ -89,7 +89,7 @@ func getDecodedTransactionByHash(ctx context.Context, chain, hash string) (*mode
 
 func setProxy() func(*http.Request) (*url.URL, error) {
 	return func(_ *http.Request) (*url.URL, error) {
-		//return nil, nil
+		return nil, nil
 		return url.Parse("http://127.0.0.1:8889")
 	}
 }

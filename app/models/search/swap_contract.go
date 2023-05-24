@@ -12,10 +12,11 @@ import (
 
 type (
 	SwapContractSearch struct {
-		ID      primitive.ObjectID
-		ChainID uint64
-		Address string
-		Status  enum.StatusType
+		ID          primitive.ObjectID
+		ChainID     uint64
+		Address     string
+		ProviderKey string
+		Status      enum.StatusType
 		//sort
 		//limit
 		ListNum int64
@@ -39,6 +40,9 @@ func (params *SwapContractSearch) BuildAdminSearch(chain *odm.DB) *odm.DB {
 	}
 	if params.Address != "" {
 		chain = chain.Where(bson.M{"address": strings.ToLower(params.Address)})
+	}
+	if params.ProviderKey != "" {
+		chain = chain.Where(bson.M{"provider_key": params.ProviderKey})
 	}
 	//sort
 	chain = chain.Sort(bson.M{"sort_num": -1})

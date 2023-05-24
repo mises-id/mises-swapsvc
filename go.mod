@@ -13,6 +13,7 @@ require (
 	github.com/metaverse/truss v0.3.1
 	github.com/mises-id/sns-storagesvc/sdk v0.0.0-20220920081129-d682f954bf94
 	github.com/pkg/errors v0.9.1
+	github.com/sirupsen/logrus v1.8.1
 	go.mongodb.org/mongo-driver v1.11.6
 	google.golang.org/grpc v1.55.0
 )

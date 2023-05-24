@@ -2,13 +2,7 @@ package swap
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/mises-id/mises-swapsvc/config/env"
 	"github.com/mises-id/mises-swapsvc/lib/codes"
@@ -77,59 +71,20 @@ func init() {
 	}
 }
 
-func swapTrade(ctx context.Context, in *SwapTradesInput) (*SwapTradeInfo, error) {
+func (c *SwapController) swapTrade(ctx context.Context, in *SwapTradeInput) (*SwapTradeInfo, error) {
 	//preload input parameters
 	if err := preloadSwapTradeInput(in); err != nil {
 		return nil, err
 	}
-	//find provider swap contract by chainID & aggregatorAddress
-	swapContract, err := findSwapContractByChainIDAndAddress(ctx, in.ChainID, in.AggregatorAddress)
+	provider, err := c.findProviderByChainIDAndAddress(ctx, in.ChainID, in.AggregatorAddress)
 	if err != nil {
 		return nil, err
 	}
-	return getSwapTradeByProvider(ctx, in, swapContract.ProviderKey)
-}
-
-func getSwapTradeByProvider(ctx context.Context, in *SwapTradesInput, providerKey string) (*SwapTradeInfo, error) {
-	switch providerKey {
-	case oneInchProvider:
-		return swapTradeByOneInchProvider(ctx, in), nil
-	default:
-		return nil, codes.ErrInvalidArgument.New("Unsupported aggregatorAddress")
-	}
-}
-
-func getAggregatorByProviderKey(ctx context.Context, providerKey string) *Aggregator {
-	switch providerKey {
-	case oneInchProvider:
-		return &Aggregator{
-			Logo:            "https://cdn.mises.site/s3://mises-storage/upload/website/logo/app_1inch_io_logo703043.io?sign=5XbOzRfkJVskb2A84x46gOnz9h2O1juQC8FRUL07fzg&version=2.0",
-			Type:            "AGG",
-			Name:            "1inch",
-			ContractAddress: "0x1111111254eeb25477b68fb85ed929f73a960582",
-		}
-	default:
-		return nil
-	}
-}
-
-func swapTrades(ctx context.Context, in *SwapTradesInput) ([]*SwapTradeInfo, error) {
-	//preload input parameters
-	if err := preloadSwapTradesInput(in); err != nil {
-		return nil, err
-	}
-	//find providers
-	//1inch
-	trades := make([]*SwapTradeInfo, 0)
-
-	tradeOneInch := swapTradeByOneInchProvider(ctx, in)
-
-	trades = append(trades, tradeOneInch)
-	return trades, nil
+	return provider.SwapTrade(ctx, in)
 }
 
 // ----------------------------------------------------------------
-func preloadSwapTradeInput(in *SwapTradesInput) error {
+func preloadSwapTradeInput(in *SwapTradeInput) error {
 	if in.ChainID == 0 {
 		return codes.ErrInvalidArgument.New("Invaild chainID")
 	}
@@ -151,90 +106,6 @@ func preloadSwapTradeInput(in *SwapTradesInput) error {
 	if in.AggregatorAddress == "" {
 		return codes.ErrInvalidArgument.New("Invaild aggregatorAddress")
 	}
+	in.AggregatorAddress = strings.ToLower(in.AggregatorAddress)
 	return nil
-}
-
-// ----------------------------------------------------------------
-func preloadSwapTradesInput(in *SwapTradesInput) error {
-	if in.ChainID == 0 {
-		return codes.ErrInvalidArgument.New("Invaild chainID")
-	}
-	if in.FromTokenAddress == "" {
-		return codes.ErrInvalidArgument.New("Invaild fromTokenAddress")
-	}
-	if in.Amount == "" || in.Amount == "0" {
-		return codes.ErrInvalidArgument.New("Invaild amount")
-	}
-	if in.ToTokenAddress == "" {
-		return codes.ErrInvalidArgument.New("Invaild toTokenAddress")
-	}
-	if in.FromAddress == "" {
-		return codes.ErrInvalidArgument.New("Invaild fromAddress")
-	}
-	if in.DestReceiver == "" {
-		in.DestReceiver = in.FromAddress
-	}
-	return nil
-}
-
-func swapTradeByOneInchProvider(ctx context.Context, in *SwapTradesInput) *SwapTradeInfo {
-	//check if OneInch is supported
-	st := time.Now()
-	resp := &SwapTradeInfo{
-		FromTokenAddress: in.FromTokenAddress,
-		ToTokenAddress:   in.ToTokenAddress,
-		Fee:              swapFee,
-		FromTokenAmount:  in.Amount,
-	}
-	resp.Aggregator = getAggregatorByProviderKey(ctx, oneInchProvider)
-	data, err := apiSwapTradeByOneInchProvider(ctx, in)
-	resp.FetchTime = int64(time.Since(st).Milliseconds())
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
-	resp.Error = data.Description
-	resp.ToTokenAmount = data.ToTokenAmount
-	if data.Tx != nil {
-		resp.Trade = &Trade{
-			From:     data.Tx.From,
-			To:       data.Tx.To,
-			Data:     data.Tx.Data,
-			GasPrice: data.Tx.GasPrice,
-			GasLimit: fmt.Sprintf("%d", data.Tx.Gas),
-			Value:    data.Tx.Value,
-		}
-	}
-	return resp
-}
-
-func apiSwapTradeByOneInchProvider(ctx context.Context, in *SwapTradesInput) (*oneInchSwapResponse, error) {
-	address := strings.ToLower(swapReferrerAddress)
-	if !strings.HasPrefix(address, "0x") {
-		address = "0x" + address
-	}
-	api := fmt.Sprintf("%s/%d/swap?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fromAddress=%s&destReceiver=%s&slippage=%.3f&referrerAddress=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, in.FromAddress, in.DestReceiver, in.Slippage, address, swapFee)
-	transport := &http.Transport{Proxy: setProxy()}
-	client := &http.Client{Transport: transport}
-	client.Timeout = time.Second * 3
-	req, err := http.NewRequest("GET", api, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Close = true
-	resp, err := client.Do(req)
-	if err != nil {
-		if strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
-			return nil, errors.New("Request oneInch API timeout")
-		}
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		//return nil, errors.New(resp.Status)
-	}
-	body, _ := ioutil.ReadAll(resp.Body)
-	out := &oneInchSwapResponse{}
-	json.Unmarshal(body, out)
-	return out, nil
 }

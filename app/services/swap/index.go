@@ -33,7 +33,7 @@ type (
 	ApproveSwapTransactionOutput struct {
 		Data, To, GasPrice, Value string
 	}
-	SwapTradesInput struct {
+	SwapTradeInput struct {
 		ChainID           uint64
 		FromAddress       string
 		FromTokenAddress  string
@@ -49,29 +49,47 @@ type (
 		ToTokenAddress   string
 		Amount           string
 	}
+
+	SwapController struct {
+		providers map[string]Provider
+	}
 )
 
-func GetSwapApproveAllowance(ctx context.Context, in *GetSwapApproveAllowanceInput) (*GetSwapApproveAllowanceOutput, error) {
+var (
+	swapCtrlEntity *SwapController
+)
 
-	return getApproveAllowance(ctx, in)
+func NewSwapController() *SwapController {
+	if swapCtrlEntity != nil {
+		return swapCtrlEntity
+	}
+	//register provider
+	providers := make(map[string]Provider, 0)
+	oneProvider := NewOneInchProvider()
+	if oneProvider != nil {
+		providers[oneProvider.Key()] = oneProvider
+	}
+	swapCtrlEntity = &SwapController{providers: providers}
+	return swapCtrlEntity
+}
+
+func GetSwapApproveAllowance(ctx context.Context, in *GetSwapApproveAllowanceInput) (*GetSwapApproveAllowanceOutput, error) {
+	ctrl := NewSwapController()
+	return ctrl.getApproveAllowance(ctx, in)
 }
 
 func ApproveSwapTransaction(ctx context.Context, in *ApproveSwapTransactionInput) (*ApproveSwapTransactionOutput, error) {
-
-	return approveTransaction(ctx, in)
+	ctrl := NewSwapController()
+	return ctrl.approveTransaction(ctx, in)
 }
 
-func SwapTrades(ctx context.Context, in *SwapTradesInput) ([]*SwapTradeInfo, error) {
-
-	return swapTrades(ctx, in)
-}
-func SwapTrade(ctx context.Context, in *SwapTradesInput) (*SwapTradeInfo, error) {
-
-	return swapTrade(ctx, in)
+func SwapTrade(ctx context.Context, in *SwapTradeInput) (*SwapTradeInfo, error) {
+	ctrl := NewSwapController()
+	return ctrl.swapTrade(ctx, in)
 }
 func SwapQuote(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
-
-	return swapQuote(ctx, in)
+	ctrl := NewSwapController()
+	return ctrl.swapQuote(ctx, in)
 }
 
 // PageWebsite

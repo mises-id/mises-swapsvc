@@ -136,19 +136,6 @@ func MakeHTTPHandler(endpoints Endpoints, responseEncoder httptransport.EncodeRe
 		serverOptions...,
 	))
 
-	m.Methods("GET").Path("/swap/trades/").Handler(httptransport.NewServer(
-		endpoints.SwapTradesEndpoint,
-		DecodeHTTPSwapTradesZeroRequest,
-		responseEncoder,
-		serverOptions...,
-	))
-	m.Methods("GET").Path("/swap/trades").Handler(httptransport.NewServer(
-		endpoints.SwapTradesEndpoint,
-		DecodeHTTPSwapTradesOneRequest,
-		responseEncoder,
-		serverOptions...,
-	))
-
 	m.Methods("GET").Path("/swap/trade/").Handler(httptransport.NewServer(
 		endpoints.SwapTradeEndpoint,
 		DecodeHTTPSwapTradeZeroRequest,
@@ -171,6 +158,19 @@ func MakeHTTPHandler(endpoints Endpoints, responseEncoder httptransport.EncodeRe
 	m.Methods("GET").Path("/swap/quote").Handler(httptransport.NewServer(
 		endpoints.SwapQuoteEndpoint,
 		DecodeHTTPSwapQuoteOneRequest,
+		responseEncoder,
+		serverOptions...,
+	))
+
+	m.Methods("GET").Path("/test/").Handler(httptransport.NewServer(
+		endpoints.TestEndpoint,
+		DecodeHTTPTestZeroRequest,
+		responseEncoder,
+		serverOptions...,
+	))
+	m.Methods("GET").Path("/test").Handler(httptransport.NewServer(
+		endpoints.TestEndpoint,
+		DecodeHTTPTestOneRequest,
 		responseEncoder,
 		serverOptions...,
 	))
@@ -889,186 +889,6 @@ func DecodeHTTPApproveSwapTransactionOneRequest(_ context.Context, r *http.Reque
 	return &req, err
 }
 
-// DecodeHTTPSwapTradesZeroRequest is a transport/http.DecodeRequestFunc that
-// decodes a JSON-encoded swaptrades request from the HTTP request
-// body. Primarily useful in a server.
-func DecodeHTTPSwapTradesZeroRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	defer r.Body.Close()
-	var req pb.SwapTradesRequest
-	buf, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot read body of http request")
-	}
-	if len(buf) > 0 {
-		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
-		unmarshaller := jsonpb.Unmarshaler{
-			AllowUnknownFields: true,
-		}
-		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
-			const size = 8196
-			if len(buf) > size {
-				buf = buf[:size]
-			}
-			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
-				http.StatusBadRequest,
-				nil,
-			}
-		}
-	}
-
-	pathParams := encodePathParams(mux.Vars(r))
-	_ = pathParams
-
-	queryParams := r.URL.Query()
-	_ = queryParams
-
-	if ChainIDSwapTradesStrArr, ok := queryParams["chainID"]; ok {
-		ChainIDSwapTradesStr := ChainIDSwapTradesStrArr[0]
-		ChainIDSwapTrades, err := strconv.ParseUint(ChainIDSwapTradesStr, 10, 64)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error while extracting ChainIDSwapTrades from query, queryParams: %v", queryParams))
-		}
-		req.ChainID = ChainIDSwapTrades
-	}
-
-	if AmountSwapTradesStrArr, ok := queryParams["amount"]; ok {
-		AmountSwapTradesStr := AmountSwapTradesStrArr[0]
-		AmountSwapTrades := AmountSwapTradesStr
-		req.Amount = AmountSwapTrades
-	}
-
-	if FromTokenAddressSwapTradesStrArr, ok := queryParams["from_token_address"]; ok {
-		FromTokenAddressSwapTradesStr := FromTokenAddressSwapTradesStrArr[0]
-		FromTokenAddressSwapTrades := FromTokenAddressSwapTradesStr
-		req.FromTokenAddress = FromTokenAddressSwapTrades
-	}
-
-	if ToTokenAddressSwapTradesStrArr, ok := queryParams["to_token_address"]; ok {
-		ToTokenAddressSwapTradesStr := ToTokenAddressSwapTradesStrArr[0]
-		ToTokenAddressSwapTrades := ToTokenAddressSwapTradesStr
-		req.ToTokenAddress = ToTokenAddressSwapTrades
-	}
-
-	if SlippageSwapTradesStrArr, ok := queryParams["slippage"]; ok {
-		SlippageSwapTradesStr := SlippageSwapTradesStrArr[0]
-		SlippageSwapTrades, err := strconv.ParseFloat(SlippageSwapTradesStr, 32)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error while extracting SlippageSwapTrades from query, queryParams: %v", queryParams))
-		}
-		req.Slippage = float32(SlippageSwapTrades)
-	}
-
-	if FromAddressSwapTradesStrArr, ok := queryParams["from_address"]; ok {
-		FromAddressSwapTradesStr := FromAddressSwapTradesStrArr[0]
-		FromAddressSwapTrades := FromAddressSwapTradesStr
-		req.FromAddress = FromAddressSwapTrades
-	}
-
-	if DestReceiverSwapTradesStrArr, ok := queryParams["dest_receiver"]; ok {
-		DestReceiverSwapTradesStr := DestReceiverSwapTradesStrArr[0]
-		DestReceiverSwapTrades := DestReceiverSwapTradesStr
-		req.DestReceiver = DestReceiverSwapTrades
-	}
-
-	if AggregatorAddressSwapTradesStrArr, ok := queryParams["aggregator_address"]; ok {
-		AggregatorAddressSwapTradesStr := AggregatorAddressSwapTradesStrArr[0]
-		AggregatorAddressSwapTrades := AggregatorAddressSwapTradesStr
-		req.AggregatorAddress = AggregatorAddressSwapTrades
-	}
-
-	return &req, err
-}
-
-// DecodeHTTPSwapTradesOneRequest is a transport/http.DecodeRequestFunc that
-// decodes a JSON-encoded swaptrades request from the HTTP request
-// body. Primarily useful in a server.
-func DecodeHTTPSwapTradesOneRequest(_ context.Context, r *http.Request) (interface{}, error) {
-	defer r.Body.Close()
-	var req pb.SwapTradesRequest
-	buf, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return nil, errors.Wrapf(err, "cannot read body of http request")
-	}
-	if len(buf) > 0 {
-		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
-		unmarshaller := jsonpb.Unmarshaler{
-			AllowUnknownFields: true,
-		}
-		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
-			const size = 8196
-			if len(buf) > size {
-				buf = buf[:size]
-			}
-			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
-				http.StatusBadRequest,
-				nil,
-			}
-		}
-	}
-
-	pathParams := encodePathParams(mux.Vars(r))
-	_ = pathParams
-
-	queryParams := r.URL.Query()
-	_ = queryParams
-
-	if ChainIDSwapTradesStrArr, ok := queryParams["chainID"]; ok {
-		ChainIDSwapTradesStr := ChainIDSwapTradesStrArr[0]
-		ChainIDSwapTrades, err := strconv.ParseUint(ChainIDSwapTradesStr, 10, 64)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error while extracting ChainIDSwapTrades from query, queryParams: %v", queryParams))
-		}
-		req.ChainID = ChainIDSwapTrades
-	}
-
-	if AmountSwapTradesStrArr, ok := queryParams["amount"]; ok {
-		AmountSwapTradesStr := AmountSwapTradesStrArr[0]
-		AmountSwapTrades := AmountSwapTradesStr
-		req.Amount = AmountSwapTrades
-	}
-
-	if FromTokenAddressSwapTradesStrArr, ok := queryParams["from_token_address"]; ok {
-		FromTokenAddressSwapTradesStr := FromTokenAddressSwapTradesStrArr[0]
-		FromTokenAddressSwapTrades := FromTokenAddressSwapTradesStr
-		req.FromTokenAddress = FromTokenAddressSwapTrades
-	}
-
-	if ToTokenAddressSwapTradesStrArr, ok := queryParams["to_token_address"]; ok {
-		ToTokenAddressSwapTradesStr := ToTokenAddressSwapTradesStrArr[0]
-		ToTokenAddressSwapTrades := ToTokenAddressSwapTradesStr
-		req.ToTokenAddress = ToTokenAddressSwapTrades
-	}
-
-	if SlippageSwapTradesStrArr, ok := queryParams["slippage"]; ok {
-		SlippageSwapTradesStr := SlippageSwapTradesStrArr[0]
-		SlippageSwapTrades, err := strconv.ParseFloat(SlippageSwapTradesStr, 32)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error while extracting SlippageSwapTrades from query, queryParams: %v", queryParams))
-		}
-		req.Slippage = float32(SlippageSwapTrades)
-	}
-
-	if FromAddressSwapTradesStrArr, ok := queryParams["from_address"]; ok {
-		FromAddressSwapTradesStr := FromAddressSwapTradesStrArr[0]
-		FromAddressSwapTrades := FromAddressSwapTradesStr
-		req.FromAddress = FromAddressSwapTrades
-	}
-
-	if DestReceiverSwapTradesStrArr, ok := queryParams["dest_receiver"]; ok {
-		DestReceiverSwapTradesStr := DestReceiverSwapTradesStrArr[0]
-		DestReceiverSwapTrades := DestReceiverSwapTradesStr
-		req.DestReceiver = DestReceiverSwapTrades
-	}
-
-	if AggregatorAddressSwapTradesStrArr, ok := queryParams["aggregator_address"]; ok {
-		AggregatorAddressSwapTradesStr := AggregatorAddressSwapTradesStrArr[0]
-		AggregatorAddressSwapTrades := AggregatorAddressSwapTradesStr
-		req.AggregatorAddress = AggregatorAddressSwapTrades
-	}
-
-	return &req, err
-}
-
 // DecodeHTTPSwapTradeZeroRequest is a transport/http.DecodeRequestFunc that
 // decodes a JSON-encoded swaptrade request from the HTTP request
 // body. Primarily useful in a server.
@@ -1370,6 +1190,90 @@ func DecodeHTTPSwapQuoteOneRequest(_ context.Context, r *http.Request) (interfac
 		ToTokenAddressSwapQuoteStr := ToTokenAddressSwapQuoteStrArr[0]
 		ToTokenAddressSwapQuote := ToTokenAddressSwapQuoteStr
 		req.ToTokenAddress = ToTokenAddressSwapQuote
+	}
+
+	return &req, err
+}
+
+// DecodeHTTPTestZeroRequest is a transport/http.DecodeRequestFunc that
+// decodes a JSON-encoded test request from the HTTP request
+// body. Primarily useful in a server.
+func DecodeHTTPTestZeroRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	var req pb.TestRequest
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot read body of http request")
+	}
+	if len(buf) > 0 {
+		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
+		unmarshaller := jsonpb.Unmarshaler{
+			AllowUnknownFields: true,
+		}
+		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
+			const size = 8196
+			if len(buf) > size {
+				buf = buf[:size]
+			}
+			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
+				http.StatusBadRequest,
+				nil,
+			}
+		}
+	}
+
+	pathParams := encodePathParams(mux.Vars(r))
+	_ = pathParams
+
+	queryParams := r.URL.Query()
+	_ = queryParams
+
+	if TypeTestStrArr, ok := queryParams["type"]; ok {
+		TypeTestStr := TypeTestStrArr[0]
+		TypeTest := TypeTestStr
+		req.Type = TypeTest
+	}
+
+	return &req, err
+}
+
+// DecodeHTTPTestOneRequest is a transport/http.DecodeRequestFunc that
+// decodes a JSON-encoded test request from the HTTP request
+// body. Primarily useful in a server.
+func DecodeHTTPTestOneRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	var req pb.TestRequest
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot read body of http request")
+	}
+	if len(buf) > 0 {
+		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
+		unmarshaller := jsonpb.Unmarshaler{
+			AllowUnknownFields: true,
+		}
+		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
+			const size = 8196
+			if len(buf) > size {
+				buf = buf[:size]
+			}
+			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
+				http.StatusBadRequest,
+				nil,
+			}
+		}
+	}
+
+	pathParams := encodePathParams(mux.Vars(r))
+	_ = pathParams
+
+	queryParams := r.URL.Query()
+	_ = queryParams
+
+	if TypeTestStrArr, ok := queryParams["type"]; ok {
+		TypeTestStr := TypeTestStrArr[0]
+		TypeTest := TypeTestStr
+		req.Type = TypeTest
 	}
 
 	return &req, err

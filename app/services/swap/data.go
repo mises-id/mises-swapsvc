@@ -23,6 +23,9 @@ type (
 	SwapContractJson struct {
 		Lists []*models.SwapContract `json:"list"`
 	}
+	SwapProviderJson struct {
+		Lists []*models.SwapProvider `json:"list"`
+	}
 )
 
 var (
@@ -170,6 +173,41 @@ func getSwapContractByJSON() ([]*models.SwapContract, error) {
 	}
 	defer jsonFile.Close()
 	out := &SwapContractJson{}
+	byteValue, err := ioutil.ReadAll(jsonFile)
+	if err != nil {
+		return nil, err
+	}
+	json.Unmarshal(byteValue, out)
+	return out.Lists, nil
+}
+
+// UpdateSwapProvider
+func UpdateSwapProvider(ctx context.Context) error {
+	err := runUpdateSwapProvider(ctx)
+	if err != nil {
+		fmt.Printf("Error updating contract list: %s", err.Error())
+		return err
+	}
+	return nil
+}
+
+func runUpdateSwapProvider(ctx context.Context) error {
+	lists, err := getSwapProviderByJSON()
+	if err != nil {
+		return err
+	}
+	return models.CreateSwapProviderMany(ctx, lists)
+}
+
+func getSwapProviderByJSON() ([]*models.SwapProvider, error) {
+	//local json
+	localfile := path.Join("./assets/swap/providers.json")
+	jsonFile, err := os.Open(localfile)
+	if err != nil {
+		return nil, err
+	}
+	defer jsonFile.Close()
+	out := &SwapProviderJson{}
 	byteValue, err := ioutil.ReadAll(jsonFile)
 	if err != nil {
 		return nil, err

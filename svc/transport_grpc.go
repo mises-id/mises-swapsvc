@@ -65,12 +65,6 @@ func MakeGRPCServer(endpoints Endpoints, options ...grpctransport.ServerOption) 
 			EncodeGRPCApproveSwapTransactionResponse,
 			serverOptions...,
 		),
-		swaptrades: grpctransport.NewServer(
-			endpoints.SwapTradesEndpoint,
-			DecodeGRPCSwapTradesRequest,
-			EncodeGRPCSwapTradesResponse,
-			serverOptions...,
-		),
 		swaptrade: grpctransport.NewServer(
 			endpoints.SwapTradeEndpoint,
 			DecodeGRPCSwapTradeRequest,
@@ -81,6 +75,12 @@ func MakeGRPCServer(endpoints Endpoints, options ...grpctransport.ServerOption) 
 			endpoints.SwapQuoteEndpoint,
 			DecodeGRPCSwapQuoteRequest,
 			EncodeGRPCSwapQuoteResponse,
+			serverOptions...,
+		),
+		test: grpctransport.NewServer(
+			endpoints.TestEndpoint,
+			DecodeGRPCTestRequest,
+			EncodeGRPCTestResponse,
 			serverOptions...,
 		),
 	}
@@ -94,9 +94,9 @@ type grpcServer struct {
 	listswaptoken           grpctransport.Handler
 	getswapapproveallowance grpctransport.Handler
 	approveswaptransaction  grpctransport.Handler
-	swaptrades              grpctransport.Handler
 	swaptrade               grpctransport.Handler
 	swapquote               grpctransport.Handler
+	test                    grpctransport.Handler
 }
 
 // Methods for grpcServer to implement SwapsvcServer interface
@@ -149,14 +149,6 @@ func (s *grpcServer) ApproveSwapTransaction(ctx context.Context, req *pb.Approve
 	return rep.(*pb.ApproveSwapTransactionResponse), nil
 }
 
-func (s *grpcServer) SwapTrades(ctx context.Context, req *pb.SwapTradesRequest) (*pb.SwapTradesResponse, error) {
-	_, rep, err := s.swaptrades.ServeGRPC(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	return rep.(*pb.SwapTradesResponse), nil
-}
-
 func (s *grpcServer) SwapTrade(ctx context.Context, req *pb.SwapTradeRequest) (*pb.SwapTradeResponse, error) {
 	_, rep, err := s.swaptrade.ServeGRPC(ctx, req)
 	if err != nil {
@@ -171,6 +163,14 @@ func (s *grpcServer) SwapQuote(ctx context.Context, req *pb.SwapQuoteRequest) (*
 		return nil, err
 	}
 	return rep.(*pb.SwapQuoteResponse), nil
+}
+
+func (s *grpcServer) Test(ctx context.Context, req *pb.TestRequest) (*pb.TestResponse, error) {
+	_, rep, err := s.test.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.TestResponse), nil
 }
 
 // Server Decode
@@ -217,13 +217,6 @@ func DecodeGRPCApproveSwapTransactionRequest(_ context.Context, grpcReq interfac
 	return req, nil
 }
 
-// DecodeGRPCSwapTradesRequest is a transport/grpc.DecodeRequestFunc that converts a
-// gRPC swaptrades request to a user-domain swaptrades request. Primarily useful in a server.
-func DecodeGRPCSwapTradesRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
-	req := grpcReq.(*pb.SwapTradesRequest)
-	return req, nil
-}
-
 // DecodeGRPCSwapTradeRequest is a transport/grpc.DecodeRequestFunc that converts a
 // gRPC swaptrade request to a user-domain swaptrade request. Primarily useful in a server.
 func DecodeGRPCSwapTradeRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
@@ -235,6 +228,13 @@ func DecodeGRPCSwapTradeRequest(_ context.Context, grpcReq interface{}) (interfa
 // gRPC swapquote request to a user-domain swapquote request. Primarily useful in a server.
 func DecodeGRPCSwapQuoteRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
 	req := grpcReq.(*pb.SwapQuoteRequest)
+	return req, nil
+}
+
+// DecodeGRPCTestRequest is a transport/grpc.DecodeRequestFunc that converts a
+// gRPC test request to a user-domain test request. Primarily useful in a server.
+func DecodeGRPCTestRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.TestRequest)
 	return req, nil
 }
 
@@ -282,13 +282,6 @@ func EncodeGRPCApproveSwapTransactionResponse(_ context.Context, response interf
 	return resp, nil
 }
 
-// EncodeGRPCSwapTradesResponse is a transport/grpc.EncodeResponseFunc that converts a
-// user-domain swaptrades response to a gRPC swaptrades reply. Primarily useful in a server.
-func EncodeGRPCSwapTradesResponse(_ context.Context, response interface{}) (interface{}, error) {
-	resp := response.(*pb.SwapTradesResponse)
-	return resp, nil
-}
-
 // EncodeGRPCSwapTradeResponse is a transport/grpc.EncodeResponseFunc that converts a
 // user-domain swaptrade response to a gRPC swaptrade reply. Primarily useful in a server.
 func EncodeGRPCSwapTradeResponse(_ context.Context, response interface{}) (interface{}, error) {
@@ -300,6 +293,13 @@ func EncodeGRPCSwapTradeResponse(_ context.Context, response interface{}) (inter
 // user-domain swapquote response to a gRPC swapquote reply. Primarily useful in a server.
 func EncodeGRPCSwapQuoteResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(*pb.SwapQuoteResponse)
+	return resp, nil
+}
+
+// EncodeGRPCTestResponse is a transport/grpc.EncodeResponseFunc that converts a
+// user-domain test response to a gRPC test reply. Primarily useful in a server.
+func EncodeGRPCTestResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*pb.TestResponse)
 	return resp, nil
 }
 

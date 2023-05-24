@@ -2,13 +2,7 @@ package swap
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"strings"
-	"time"
+	"sync"
 
 	"github.com/mises-id/mises-swapsvc/lib/codes"
 )
@@ -35,23 +29,52 @@ type (
 	}
 )
 
-func swapQuote(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
-	//preload input parameters
-	if err := preloadSwapQuoteInput(in); err != nil {
+func (c *SwapController) swapQuote(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
+	// check input parameters
+	if err := checkSwapQuoteInput(in); err != nil {
 		return nil, err
 	}
-	//find providers
-	//1inch
+	wg := &sync.WaitGroup{}
+	checkTask := make(chan int)
+	totalTask := len(c.providers)
+	if totalTask == 0 {
+		return nil, nil
+	}
+	wg.Add(1)
+	go c.checkTask(totalTask, checkTask, wg)
 	quotes := make([]*SwapQuoteInfo, 0)
-	st := time.Now()
-	quoteOneInch := swapQuoteByOneInchProvider(ctx, in)
-	quoteOneInch.FetchTime = int64(time.Since(st).Milliseconds())
-	quotes = append(quotes, quoteOneInch)
+	for _, provider := range c.providers {
+		go func(provider Provider) {
+			wg.Add(1)
+			defer func() {
+				wg.Done()
+				checkTask <- 1
+			}()
+			//run
+			quote := provider.SwapQuote(ctx, in)
+			quotes = append(quotes, quote)
+		}(provider)
+	}
+	wg.Wait()
 	return quotes, nil
 }
 
+func (c *SwapController) checkTask(taskNum int, ck chan int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	if taskNum == 0 {
+		return
+	}
+	for {
+		<-ck
+		taskNum--
+		if taskNum == 0 {
+			break
+		}
+	}
+}
+
 // ----------------------------------------------------------------
-func preloadSwapQuoteInput(in *SwapQuoteInput) error {
+func checkSwapQuoteInput(in *SwapQuoteInput) error {
 	if in.ChainID == 0 {
 		return codes.ErrInvalidArgument.New("Invaild chainID")
 	}
@@ -65,51 +88,4 @@ func preloadSwapQuoteInput(in *SwapQuoteInput) error {
 		return codes.ErrInvalidArgument.New("Invaild toTokenAddress")
 	}
 	return nil
-}
-
-func swapQuoteByOneInchProvider(ctx context.Context, in *SwapQuoteInput) *SwapQuoteInfo {
-	//check if OneInch is supported
-	resp := &SwapQuoteInfo{
-		FromTokenAddress: in.FromTokenAddress,
-		ToTokenAddress:   in.ToTokenAddress,
-		Fee:              swapFee,
-		FromTokenAmount:  in.Amount,
-	}
-	resp.Aggregator = getAggregatorByProviderKey(ctx, oneInchProvider)
-	data, err := apiSwapQuoteByOneInchProvider(ctx, in)
-	if err != nil {
-		resp.Error = err.Error()
-		return resp
-	}
-	resp.EstimateGasFee = fmt.Sprintf("%d", data.EstimateGasFee)
-	resp.Error = data.Description
-	resp.ToTokenAmount = data.ToTokenAmount
-	return resp
-}
-
-func apiSwapQuoteByOneInchProvider(ctx context.Context, in *SwapQuoteInput) (*oneInchQuoteResponse, error) {
-	api := fmt.Sprintf("%s/%d/quote?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, swapFee)
-	transport := &http.Transport{Proxy: setProxy()}
-	client := &http.Client{Transport: transport}
-	client.Timeout = time.Second * 3
-	req, err := http.NewRequest("GET", api, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Close = true
-	resp, err := client.Do(req)
-	if err != nil {
-		if strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
-			return nil, errors.New("Request oneInch API timeout")
-		}
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		//return nil, errors.New(resp.Status)
-	}
-	body, _ := ioutil.ReadAll(resp.Body)
-	out := &oneInchQuoteResponse{}
-	json.Unmarshal(body, out)
-	return out, nil
 }

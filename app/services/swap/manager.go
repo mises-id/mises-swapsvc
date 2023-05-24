@@ -3,6 +3,7 @@ package swap
 import (
 	"context"
 
+	"github.com/mises-id/mises-swapsvc/app/models"
 	"github.com/mises-id/mises-swapsvc/app/services/swap/swap_sync"
 )
 
@@ -15,5 +16,14 @@ func SyncSwapOrder(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+func InitSwap(ctx context.Context) error {
+	UpdateSwapChain(ctx)
+	UpdateSwapContract(ctx)
+	UpdateSwapToken(ctx)
+	UpdateSwapProvider(ctx)
+	models.EnsureIndex()
 	return nil
 }

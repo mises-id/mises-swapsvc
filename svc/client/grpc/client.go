@@ -114,19 +114,6 @@ func New(conn *grpc.ClientConn, options ...ClientOption) (pb.SwapsvcServer, erro
 		).Endpoint()
 	}
 
-	var swaptradesEndpoint endpoint.Endpoint
-	{
-		swaptradesEndpoint = grpctransport.NewClient(
-			conn,
-			"swapsvc.Swapsvc",
-			"SwapTrades",
-			EncodeGRPCSwapTradesRequest,
-			DecodeGRPCSwapTradesResponse,
-			pb.SwapTradesResponse{},
-			clientOptions...,
-		).Endpoint()
-	}
-
 	var swaptradeEndpoint endpoint.Endpoint
 	{
 		swaptradeEndpoint = grpctransport.NewClient(
@@ -153,6 +140,19 @@ func New(conn *grpc.ClientConn, options ...ClientOption) (pb.SwapsvcServer, erro
 		).Endpoint()
 	}
 
+	var testEndpoint endpoint.Endpoint
+	{
+		testEndpoint = grpctransport.NewClient(
+			conn,
+			"swapsvc.Swapsvc",
+			"Test",
+			EncodeGRPCTestRequest,
+			DecodeGRPCTestResponse,
+			pb.TestResponse{},
+			clientOptions...,
+		).Endpoint()
+	}
+
 	return svc.Endpoints{
 		SyncSwapOrderEndpoint:           syncswaporderEndpoint,
 		SwapOrderPageEndpoint:           swaporderpageEndpoint,
@@ -160,9 +160,9 @@ func New(conn *grpc.ClientConn, options ...ClientOption) (pb.SwapsvcServer, erro
 		ListSwapTokenEndpoint:           listswaptokenEndpoint,
 		GetSwapApproveAllowanceEndpoint: getswapapproveallowanceEndpoint,
 		ApproveSwapTransactionEndpoint:  approveswaptransactionEndpoint,
-		SwapTradesEndpoint:              swaptradesEndpoint,
 		SwapTradeEndpoint:               swaptradeEndpoint,
 		SwapQuoteEndpoint:               swapquoteEndpoint,
+		TestEndpoint:                    testEndpoint,
 	}, nil
 }
 
@@ -210,13 +210,6 @@ func DecodeGRPCApproveSwapTransactionResponse(_ context.Context, grpcReply inter
 	return reply, nil
 }
 
-// DecodeGRPCSwapTradesResponse is a transport/grpc.DecodeResponseFunc that converts a
-// gRPC swaptrades reply to a user-domain swaptrades response. Primarily useful in a client.
-func DecodeGRPCSwapTradesResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
-	reply := grpcReply.(*pb.SwapTradesResponse)
-	return reply, nil
-}
-
 // DecodeGRPCSwapTradeResponse is a transport/grpc.DecodeResponseFunc that converts a
 // gRPC swaptrade reply to a user-domain swaptrade response. Primarily useful in a client.
 func DecodeGRPCSwapTradeResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
@@ -228,6 +221,13 @@ func DecodeGRPCSwapTradeResponse(_ context.Context, grpcReply interface{}) (inte
 // gRPC swapquote reply to a user-domain swapquote response. Primarily useful in a client.
 func DecodeGRPCSwapQuoteResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
 	reply := grpcReply.(*pb.SwapQuoteResponse)
+	return reply, nil
+}
+
+// DecodeGRPCTestResponse is a transport/grpc.DecodeResponseFunc that converts a
+// gRPC test reply to a user-domain test response. Primarily useful in a client.
+func DecodeGRPCTestResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.TestResponse)
 	return reply, nil
 }
 
@@ -275,13 +275,6 @@ func EncodeGRPCApproveSwapTransactionRequest(_ context.Context, request interfac
 	return req, nil
 }
 
-// EncodeGRPCSwapTradesRequest is a transport/grpc.EncodeRequestFunc that converts a
-// user-domain swaptrades request to a gRPC swaptrades request. Primarily useful in a client.
-func EncodeGRPCSwapTradesRequest(_ context.Context, request interface{}) (interface{}, error) {
-	req := request.(*pb.SwapTradesRequest)
-	return req, nil
-}
-
 // EncodeGRPCSwapTradeRequest is a transport/grpc.EncodeRequestFunc that converts a
 // user-domain swaptrade request to a gRPC swaptrade request. Primarily useful in a client.
 func EncodeGRPCSwapTradeRequest(_ context.Context, request interface{}) (interface{}, error) {
@@ -293,6 +286,13 @@ func EncodeGRPCSwapTradeRequest(_ context.Context, request interface{}) (interfa
 // user-domain swapquote request to a gRPC swapquote request. Primarily useful in a client.
 func EncodeGRPCSwapQuoteRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*pb.SwapQuoteRequest)
+	return req, nil
+}
+
+// EncodeGRPCTestRequest is a transport/grpc.EncodeRequestFunc that converts a
+// user-domain test request to a gRPC test request. Primarily useful in a client.
+func EncodeGRPCTestRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*pb.TestRequest)
 	return req, nil
 }
 

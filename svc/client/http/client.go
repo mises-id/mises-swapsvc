@@ -111,16 +111,6 @@ func New(instance string, options ...httptransport.ClientOption) (pb.SwapsvcServ
 			options...,
 		).Endpoint()
 	}
-	var SwapTradesZeroEndpoint endpoint.Endpoint
-	{
-		SwapTradesZeroEndpoint = httptransport.NewClient(
-			"GET",
-			copyURL(u, "/swap/trades/"),
-			EncodeHTTPSwapTradesZeroRequest,
-			DecodeHTTPSwapTradesResponse,
-			options...,
-		).Endpoint()
-	}
 	var SwapTradeZeroEndpoint endpoint.Endpoint
 	{
 		SwapTradeZeroEndpoint = httptransport.NewClient(
@@ -141,6 +131,16 @@ func New(instance string, options ...httptransport.ClientOption) (pb.SwapsvcServ
 			options...,
 		).Endpoint()
 	}
+	var TestZeroEndpoint endpoint.Endpoint
+	{
+		TestZeroEndpoint = httptransport.NewClient(
+			"GET",
+			copyURL(u, "/test/"),
+			EncodeHTTPTestZeroRequest,
+			DecodeHTTPTestResponse,
+			options...,
+		).Endpoint()
+	}
 
 	return svc.Endpoints{
 		SyncSwapOrderEndpoint:           SyncSwapOrderZeroEndpoint,
@@ -149,9 +149,9 @@ func New(instance string, options ...httptransport.ClientOption) (pb.SwapsvcServ
 		ListSwapTokenEndpoint:           ListSwapTokenZeroEndpoint,
 		GetSwapApproveAllowanceEndpoint: GetSwapApproveAllowanceZeroEndpoint,
 		ApproveSwapTransactionEndpoint:  ApproveSwapTransactionZeroEndpoint,
-		SwapTradesEndpoint:              SwapTradesZeroEndpoint,
 		SwapTradeEndpoint:               SwapTradeZeroEndpoint,
 		SwapQuoteEndpoint:               SwapQuoteZeroEndpoint,
+		TestEndpoint:                    TestZeroEndpoint,
 	}, nil
 }
 
@@ -340,33 +340,6 @@ func DecodeHTTPApproveSwapTransactionResponse(_ context.Context, r *http.Respons
 	return &resp, nil
 }
 
-// DecodeHTTPSwapTradesResponse is a transport/http.DecodeResponseFunc that decodes
-// a JSON-encoded SwapTradesResponse response from the HTTP response body.
-// If the response has a non-200 status code, we will interpret that as an
-// error and attempt to decode the specific error message from the response
-// body. Primarily useful in a client.
-func DecodeHTTPSwapTradesResponse(_ context.Context, r *http.Response) (interface{}, error) {
-	defer r.Body.Close()
-	buf, err := ioutil.ReadAll(r.Body)
-	if err == io.EOF {
-		return nil, errors.New("response http body empty")
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot read http body")
-	}
-
-	if r.StatusCode != http.StatusOK {
-		return nil, errors.Wrapf(errorDecoder(buf), "status code: '%d'", r.StatusCode)
-	}
-
-	var resp pb.SwapTradesResponse
-	if err = jsonpb.UnmarshalString(string(buf), &resp); err != nil {
-		return nil, errorDecoder(buf)
-	}
-
-	return &resp, nil
-}
-
 // DecodeHTTPSwapTradeResponse is a transport/http.DecodeResponseFunc that decodes
 // a JSON-encoded SwapTradeResponse response from the HTTP response body.
 // If the response has a non-200 status code, we will interpret that as an
@@ -414,6 +387,33 @@ func DecodeHTTPSwapQuoteResponse(_ context.Context, r *http.Response) (interface
 	}
 
 	var resp pb.SwapQuoteResponse
+	if err = jsonpb.UnmarshalString(string(buf), &resp); err != nil {
+		return nil, errorDecoder(buf)
+	}
+
+	return &resp, nil
+}
+
+// DecodeHTTPTestResponse is a transport/http.DecodeResponseFunc that decodes
+// a JSON-encoded TestResponse response from the HTTP response body.
+// If the response has a non-200 status code, we will interpret that as an
+// error and attempt to decode the specific error message from the response
+// body. Primarily useful in a client.
+func DecodeHTTPTestResponse(_ context.Context, r *http.Response) (interface{}, error) {
+	defer r.Body.Close()
+	buf, err := ioutil.ReadAll(r.Body)
+	if err == io.EOF {
+		return nil, errors.New("response http body empty")
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot read http body")
+	}
+
+	if r.StatusCode != http.StatusOK {
+		return nil, errors.Wrapf(errorDecoder(buf), "status code: '%d'", r.StatusCode)
+	}
+
+	var resp pb.TestResponse
 	if err = jsonpb.UnmarshalString(string(buf), &resp); err != nil {
 		return nil, errorDecoder(buf)
 	}
@@ -915,107 +915,6 @@ func EncodeHTTPApproveSwapTransactionOneRequest(_ context.Context, r *http.Reque
 	return nil
 }
 
-// EncodeHTTPSwapTradesZeroRequest is a transport/http.EncodeRequestFunc
-// that encodes a swaptrades request into the various portions of
-// the http request (path, query, and body).
-func EncodeHTTPSwapTradesZeroRequest(_ context.Context, r *http.Request, request interface{}) error {
-	strval := ""
-	_ = strval
-	req := request.(*pb.SwapTradesRequest)
-	_ = req
-
-	r.Header.Set("transport", "HTTPJSON")
-	r.Header.Set("request-url", r.URL.Path)
-
-	// Set the path parameters
-	path := strings.Join([]string{
-		"",
-		"swap",
-		"trades",
-		"",
-	}, "/")
-	u, err := url.Parse(path)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
-	}
-	r.URL.RawPath = u.RawPath
-	r.URL.Path = u.Path
-
-	// Set the query parameters
-	values := r.URL.Query()
-	var tmp []byte
-	_ = tmp
-
-	values.Add("chainID", fmt.Sprint(req.ChainID))
-
-	values.Add("amount", fmt.Sprint(req.Amount))
-
-	values.Add("from_token_address", fmt.Sprint(req.FromTokenAddress))
-
-	values.Add("to_token_address", fmt.Sprint(req.ToTokenAddress))
-
-	values.Add("slippage", fmt.Sprint(req.Slippage))
-
-	values.Add("from_address", fmt.Sprint(req.FromAddress))
-
-	values.Add("dest_receiver", fmt.Sprint(req.DestReceiver))
-
-	values.Add("aggregator_address", fmt.Sprint(req.AggregatorAddress))
-
-	r.URL.RawQuery = values.Encode()
-	return nil
-}
-
-// EncodeHTTPSwapTradesOneRequest is a transport/http.EncodeRequestFunc
-// that encodes a swaptrades request into the various portions of
-// the http request (path, query, and body).
-func EncodeHTTPSwapTradesOneRequest(_ context.Context, r *http.Request, request interface{}) error {
-	strval := ""
-	_ = strval
-	req := request.(*pb.SwapTradesRequest)
-	_ = req
-
-	r.Header.Set("transport", "HTTPJSON")
-	r.Header.Set("request-url", r.URL.Path)
-
-	// Set the path parameters
-	path := strings.Join([]string{
-		"",
-		"swap",
-		"trades",
-	}, "/")
-	u, err := url.Parse(path)
-	if err != nil {
-		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
-	}
-	r.URL.RawPath = u.RawPath
-	r.URL.Path = u.Path
-
-	// Set the query parameters
-	values := r.URL.Query()
-	var tmp []byte
-	_ = tmp
-
-	values.Add("chainID", fmt.Sprint(req.ChainID))
-
-	values.Add("amount", fmt.Sprint(req.Amount))
-
-	values.Add("from_token_address", fmt.Sprint(req.FromTokenAddress))
-
-	values.Add("to_token_address", fmt.Sprint(req.ToTokenAddress))
-
-	values.Add("slippage", fmt.Sprint(req.Slippage))
-
-	values.Add("from_address", fmt.Sprint(req.FromAddress))
-
-	values.Add("dest_receiver", fmt.Sprint(req.DestReceiver))
-
-	values.Add("aggregator_address", fmt.Sprint(req.AggregatorAddress))
-
-	r.URL.RawQuery = values.Encode()
-	return nil
-}
-
 // EncodeHTTPSwapTradeZeroRequest is a transport/http.EncodeRequestFunc
 // that encodes a swaptrade request into the various portions of
 // the http request (path, query, and body).
@@ -1197,6 +1096,77 @@ func EncodeHTTPSwapQuoteOneRequest(_ context.Context, r *http.Request, request i
 	values.Add("from_token_address", fmt.Sprint(req.FromTokenAddress))
 
 	values.Add("to_token_address", fmt.Sprint(req.ToTokenAddress))
+
+	r.URL.RawQuery = values.Encode()
+	return nil
+}
+
+// EncodeHTTPTestZeroRequest is a transport/http.EncodeRequestFunc
+// that encodes a test request into the various portions of
+// the http request (path, query, and body).
+func EncodeHTTPTestZeroRequest(_ context.Context, r *http.Request, request interface{}) error {
+	strval := ""
+	_ = strval
+	req := request.(*pb.TestRequest)
+	_ = req
+
+	r.Header.Set("transport", "HTTPJSON")
+	r.Header.Set("request-url", r.URL.Path)
+
+	// Set the path parameters
+	path := strings.Join([]string{
+		"",
+		"test",
+		"",
+	}, "/")
+	u, err := url.Parse(path)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
+	}
+	r.URL.RawPath = u.RawPath
+	r.URL.Path = u.Path
+
+	// Set the query parameters
+	values := r.URL.Query()
+	var tmp []byte
+	_ = tmp
+
+	values.Add("type", fmt.Sprint(req.Type))
+
+	r.URL.RawQuery = values.Encode()
+	return nil
+}
+
+// EncodeHTTPTestOneRequest is a transport/http.EncodeRequestFunc
+// that encodes a test request into the various portions of
+// the http request (path, query, and body).
+func EncodeHTTPTestOneRequest(_ context.Context, r *http.Request, request interface{}) error {
+	strval := ""
+	_ = strval
+	req := request.(*pb.TestRequest)
+	_ = req
+
+	r.Header.Set("transport", "HTTPJSON")
+	r.Header.Set("request-url", r.URL.Path)
+
+	// Set the path parameters
+	path := strings.Join([]string{
+		"",
+		"test",
+	}, "/")
+	u, err := url.Parse(path)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
+	}
+	r.URL.RawPath = u.RawPath
+	r.URL.Path = u.Path
+
+	// Set the query parameters
+	values := r.URL.Query()
+	var tmp []byte
+	_ = tmp
+
+	values.Add("type", fmt.Sprint(req.Type))
 
 	r.URL.RawQuery = values.Encode()
 	return nil

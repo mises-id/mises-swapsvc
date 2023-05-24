@@ -13,9 +13,10 @@ import (
 type (
 	SwapProvider struct {
 		ID        primitive.ObjectID `bson:"_id,omitempty"`
-		Name      string             `bson:"name,omitempty"`
-		Key       string             `bson:"key"`
-		Logo      string             `bson:"logo,omitempty"`
+		Name      string             `bson:"name,omitempty" json:"name,omitempty"`
+		Key       string             `bson:"key" json:"key,omitempty"`
+		Logo      string             `bson:"logo,omitempty" json:"logo,omitempty"`
+		Type      string             `bson:"type,omitempty" json:"type,omitempty"`
 		Status    enum.StatusType    `bson:"status" bson:"status"`
 		UpdatedAt time.Time          `bson:"updated_at"`
 		CreatedAt time.Time          `bson:"created_at"`
@@ -73,6 +74,14 @@ func ListSwapProvider(ctx context.Context, params IAdminParams) ([]*SwapProvider
 func FindSwapProivderByKeys(ctx context.Context, keys ...string) ([]*SwapProvider, error) {
 	res := make([]*SwapProvider, 0)
 	err := db.ODM(ctx).Find(&res, bson.M{"key": bson.M{"$in": keys}}).Error
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+func FindSwapProivderByKey(ctx context.Context, key string) (*SwapProvider, error) {
+	res := &SwapProvider{}
+	err := db.ODM(ctx).First(res, bson.M{"key": key}).Error
 	if err != nil {
 		return nil, err
 	}

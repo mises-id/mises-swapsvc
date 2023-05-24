@@ -39,9 +39,9 @@ type Endpoints struct {
 	ListSwapTokenEndpoint           endpoint.Endpoint
 	GetSwapApproveAllowanceEndpoint endpoint.Endpoint
 	ApproveSwapTransactionEndpoint  endpoint.Endpoint
-	SwapTradesEndpoint              endpoint.Endpoint
 	SwapTradeEndpoint               endpoint.Endpoint
 	SwapQuoteEndpoint               endpoint.Endpoint
+	TestEndpoint                    endpoint.Endpoint
 }
 
 // Endpoints
@@ -94,14 +94,6 @@ func (e Endpoints) ApproveSwapTransaction(ctx context.Context, in *pb.ApproveSwa
 	return response.(*pb.ApproveSwapTransactionResponse), nil
 }
 
-func (e Endpoints) SwapTrades(ctx context.Context, in *pb.SwapTradesRequest) (*pb.SwapTradesResponse, error) {
-	response, err := e.SwapTradesEndpoint(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	return response.(*pb.SwapTradesResponse), nil
-}
-
 func (e Endpoints) SwapTrade(ctx context.Context, in *pb.SwapTradeRequest) (*pb.SwapTradeResponse, error) {
 	response, err := e.SwapTradeEndpoint(ctx, in)
 	if err != nil {
@@ -116,6 +108,14 @@ func (e Endpoints) SwapQuote(ctx context.Context, in *pb.SwapQuoteRequest) (*pb.
 		return nil, err
 	}
 	return response.(*pb.SwapQuoteResponse), nil
+}
+
+func (e Endpoints) Test(ctx context.Context, in *pb.TestRequest) (*pb.TestResponse, error) {
+	response, err := e.TestEndpoint(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return response.(*pb.TestResponse), nil
 }
 
 // Make Endpoints
@@ -186,17 +186,6 @@ func MakeApproveSwapTransactionEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
 	}
 }
 
-func MakeSwapTradesEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
-	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(*pb.SwapTradesRequest)
-		v, err := s.SwapTrades(ctx, req)
-		if err != nil {
-			return nil, err
-		}
-		return v, nil
-	}
-}
-
 func MakeSwapTradeEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
 	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(*pb.SwapTradeRequest)
@@ -219,6 +208,17 @@ func MakeSwapQuoteEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
 	}
 }
 
+func MakeTestEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(*pb.TestRequest)
+		v, err := s.Test(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return v, nil
+	}
+}
+
 // WrapAllExcept wraps each Endpoint field of struct Endpoints with a
 // go-kit/kit/endpoint.Middleware.
 // Use this for applying a set of middlewares to every endpoint in the service.
@@ -232,9 +232,9 @@ func (e *Endpoints) WrapAllExcept(middleware endpoint.Middleware, excluded ...st
 		"ListSwapToken":           {},
 		"GetSwapApproveAllowance": {},
 		"ApproveSwapTransaction":  {},
-		"SwapTrades":              {},
 		"SwapTrade":               {},
 		"SwapQuote":               {},
+		"Test":                    {},
 	}
 
 	for _, ex := range excluded {
@@ -263,14 +263,14 @@ func (e *Endpoints) WrapAllExcept(middleware endpoint.Middleware, excluded ...st
 		if inc == "ApproveSwapTransaction" {
 			e.ApproveSwapTransactionEndpoint = middleware(e.ApproveSwapTransactionEndpoint)
 		}
-		if inc == "SwapTrades" {
-			e.SwapTradesEndpoint = middleware(e.SwapTradesEndpoint)
-		}
 		if inc == "SwapTrade" {
 			e.SwapTradeEndpoint = middleware(e.SwapTradeEndpoint)
 		}
 		if inc == "SwapQuote" {
 			e.SwapQuoteEndpoint = middleware(e.SwapQuoteEndpoint)
+		}
+		if inc == "Test" {
+			e.TestEndpoint = middleware(e.TestEndpoint)
 		}
 	}
 }
@@ -292,9 +292,9 @@ func (e *Endpoints) WrapAllLabeledExcept(middleware func(string, endpoint.Endpoi
 		"ListSwapToken":           {},
 		"GetSwapApproveAllowance": {},
 		"ApproveSwapTransaction":  {},
-		"SwapTrades":              {},
 		"SwapTrade":               {},
 		"SwapQuote":               {},
+		"Test":                    {},
 	}
 
 	for _, ex := range excluded {
@@ -323,14 +323,14 @@ func (e *Endpoints) WrapAllLabeledExcept(middleware func(string, endpoint.Endpoi
 		if inc == "ApproveSwapTransaction" {
 			e.ApproveSwapTransactionEndpoint = middleware("ApproveSwapTransaction", e.ApproveSwapTransactionEndpoint)
 		}
-		if inc == "SwapTrades" {
-			e.SwapTradesEndpoint = middleware("SwapTrades", e.SwapTradesEndpoint)
-		}
 		if inc == "SwapTrade" {
 			e.SwapTradeEndpoint = middleware("SwapTrade", e.SwapTradeEndpoint)
 		}
 		if inc == "SwapQuote" {
 			e.SwapQuoteEndpoint = middleware("SwapQuote", e.SwapQuoteEndpoint)
+		}
+		if inc == "Test" {
+			e.TestEndpoint = middleware("Test", e.TestEndpoint)
 		}
 	}
 }
