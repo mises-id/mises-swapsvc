@@ -15,11 +15,16 @@ import (
 )
 
 type (
+	OneInchProviderConfig struct {
+		minSlippage, maxSlippage float32
+		slippageDecimals         float32
+	}
 	OneInchProvider struct {
 		key             string
 		swapContractMap map[uint64]*models.SwapContract
 		providerInfo    *models.SwapProvider
 		ctx             context.Context
+		config          *OneInchProviderConfig
 	}
 )
 
@@ -29,6 +34,12 @@ func NewOneInchProvider() *OneInchProvider {
 		ctx:             context.TODO(),
 		swapContractMap: map[uint64]*models.SwapContract{},
 	}
+	config := &OneInchProviderConfig{
+		minSlippage:      0,
+		maxSlippage:      50,
+		slippageDecimals: 100,
+	}
+	resp.config = config
 	resp.init()
 	return resp
 }
@@ -38,11 +49,15 @@ func (p *OneInchProvider) init() {
 	provider, _ := models.FindSwapProivderByKey(p.ctx, p.key)
 	p.providerInfo = provider
 	//swapContractMap
+	p.updateSwapContractMap()
+}
+
+func (p *OneInchProvider) updateSwapContractMap() error {
 	params := &search.SwapContractSearch{ProviderKey: p.key}
 	lists, err := models.ListSwapContract(p.ctx, params)
 	if err != nil {
 		fmt.Printf("[%s] OneInchProvider ListSwapContract error: %s\n", time.Now().Local().String(), err.Error())
-		return
+		return err
 	}
 	for _, contract := range lists {
 		address := contract.Address
@@ -51,6 +66,7 @@ func (p *OneInchProvider) init() {
 		}
 		p.swapContractMap[contract.ChainID] = contract
 	}
+	return nil
 }
 
 // GetSwapApproveAllowance
@@ -147,7 +163,7 @@ func (p *OneInchProvider) swapTrade(ctx context.Context, in *SwapTradeInput) *Sw
 		resp.Error = ErrUnspportChainID
 		return resp
 	}
-	data, err := apiSwapTradeByOneInchProvider(ctx, in)
+	data, err := p.apiSwapTradeByOneInchProvider(ctx, in)
 	resp.FetchTime = int64(time.Since(st).Milliseconds())
 	if err != nil {
 		resp.Error = err.Error()
@@ -238,6 +254,9 @@ func (p *OneInchProvider) aggregator(chainID uint64) *Aggregator {
 }
 
 func (p *OneInchProvider) findContractByChainID(chainID uint64) *models.SwapContract {
+	if p.swapContractMap == nil || len(p.swapContractMap) == 0 {
+		p.updateSwapContractMap()
+	}
 	contract, ok := p.swapContractMap[chainID]
 	if !ok {
 		return nil
@@ -245,12 +264,20 @@ func (p *OneInchProvider) findContractByChainID(chainID uint64) *models.SwapCont
 	return contract
 }
 
-func apiSwapTradeByOneInchProvider(ctx context.Context, in *SwapTradeInput) (*oneInchSwapResponse, error) {
+func (p *OneInchProvider) apiSwapTradeByOneInchProvider(ctx context.Context, in *SwapTradeInput) (*oneInchSwapResponse, error) {
 	address := strings.ToLower(swapReferrerAddress)
 	if !strings.HasPrefix(address, "0x") {
 		address = "0x" + address
 	}
-	api := fmt.Sprintf("%s/%d/swap?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fromAddress=%s&destReceiver=%s&slippage=%.3f&referrerAddress=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, in.FromAddress, in.DestReceiver, in.Slippage, address, swapFee)
+	var slippage float32
+	slippage = in.Slippage * p.config.slippageDecimals
+	if slippage < p.config.minSlippage {
+		slippage = p.config.minSlippage
+	}
+	if slippage > p.config.maxSlippage {
+		slippage = p.config.maxSlippage
+	}
+	api := fmt.Sprintf("%s/%d/swap?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fromAddress=%s&destReceiver=%s&slippage=%.3f&referrerAddress=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, in.FromAddress, in.DestReceiver, slippage, address, swapFee)
 	transport := &http.Transport{Proxy: setProxy()}
 	client := &http.Client{Transport: transport}
 	client.Timeout = time.Second * 3

@@ -26,3 +26,15 @@ deploy-backup: build \
 	upload-backup \
 	replace-backup \
 	restart-backup 
+#mises_master
+upload-master:
+	scp ./main mises_master:/apps/mises-swapsvc/
+replace-master:
+	ssh mises_master "mv /apps/mises-swapsvc/main /apps/mises-swapsvc/mises-swapsvc"
+restart-master:
+	ssh mises_master "sudo supervisorctl restart mises-swapsvc"
+deploy-master: build \
+	upload-master \
+	replace-master \
+	restart-master 
+	

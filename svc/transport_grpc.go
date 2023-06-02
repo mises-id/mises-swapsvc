@@ -83,6 +83,12 @@ func MakeGRPCServer(endpoints Endpoints, options ...grpctransport.ServerOption) 
 			EncodeGRPCTestResponse,
 			serverOptions...,
 		),
+		health: grpctransport.NewServer(
+			endpoints.HealthEndpoint,
+			DecodeGRPCHealthRequest,
+			EncodeGRPCHealthResponse,
+			serverOptions...,
+		),
 	}
 }
 
@@ -97,6 +103,7 @@ type grpcServer struct {
 	swaptrade               grpctransport.Handler
 	swapquote               grpctransport.Handler
 	test                    grpctransport.Handler
+	health                  grpctransport.Handler
 }
 
 // Methods for grpcServer to implement SwapsvcServer interface
@@ -173,6 +180,14 @@ func (s *grpcServer) Test(ctx context.Context, req *pb.TestRequest) (*pb.TestRes
 	return rep.(*pb.TestResponse), nil
 }
 
+func (s *grpcServer) Health(ctx context.Context, req *pb.HealthRequest) (*pb.HealthResponse, error) {
+	_, rep, err := s.health.ServeGRPC(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return rep.(*pb.HealthResponse), nil
+}
+
 // Server Decode
 
 // DecodeGRPCSyncSwapOrderRequest is a transport/grpc.DecodeRequestFunc that converts a
@@ -238,6 +253,13 @@ func DecodeGRPCTestRequest(_ context.Context, grpcReq interface{}) (interface{},
 	return req, nil
 }
 
+// DecodeGRPCHealthRequest is a transport/grpc.DecodeRequestFunc that converts a
+// gRPC health request to a user-domain health request. Primarily useful in a server.
+func DecodeGRPCHealthRequest(_ context.Context, grpcReq interface{}) (interface{}, error) {
+	req := grpcReq.(*pb.HealthRequest)
+	return req, nil
+}
+
 // Server Encode
 
 // EncodeGRPCSyncSwapOrderResponse is a transport/grpc.EncodeResponseFunc that converts a
@@ -300,6 +322,13 @@ func EncodeGRPCSwapQuoteResponse(_ context.Context, response interface{}) (inter
 // user-domain test response to a gRPC test reply. Primarily useful in a server.
 func EncodeGRPCTestResponse(_ context.Context, response interface{}) (interface{}, error) {
 	resp := response.(*pb.TestResponse)
+	return resp, nil
+}
+
+// EncodeGRPCHealthResponse is a transport/grpc.EncodeResponseFunc that converts a
+// user-domain health response to a gRPC health reply. Primarily useful in a server.
+func EncodeGRPCHealthResponse(_ context.Context, response interface{}) (interface{}, error) {
+	resp := response.(*pb.HealthResponse)
 	return resp, nil
 }
 

@@ -174,6 +174,19 @@ func MakeHTTPHandler(endpoints Endpoints, responseEncoder httptransport.EncodeRe
 		responseEncoder,
 		serverOptions...,
 	))
+
+	m.Methods("GET").Path("/health/").Handler(httptransport.NewServer(
+		endpoints.HealthEndpoint,
+		DecodeHTTPHealthZeroRequest,
+		responseEncoder,
+		serverOptions...,
+	))
+	m.Methods("GET").Path("/health").Handler(httptransport.NewServer(
+		endpoints.HealthEndpoint,
+		DecodeHTTPHealthOneRequest,
+		responseEncoder,
+		serverOptions...,
+	))
 	return m
 }
 
@@ -1274,6 +1287,90 @@ func DecodeHTTPTestOneRequest(_ context.Context, r *http.Request) (interface{}, 
 		TypeTestStr := TypeTestStrArr[0]
 		TypeTest := TypeTestStr
 		req.Type = TypeTest
+	}
+
+	return &req, err
+}
+
+// DecodeHTTPHealthZeroRequest is a transport/http.DecodeRequestFunc that
+// decodes a JSON-encoded health request from the HTTP request
+// body. Primarily useful in a server.
+func DecodeHTTPHealthZeroRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	var req pb.HealthRequest
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot read body of http request")
+	}
+	if len(buf) > 0 {
+		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
+		unmarshaller := jsonpb.Unmarshaler{
+			AllowUnknownFields: true,
+		}
+		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
+			const size = 8196
+			if len(buf) > size {
+				buf = buf[:size]
+			}
+			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
+				http.StatusBadRequest,
+				nil,
+			}
+		}
+	}
+
+	pathParams := encodePathParams(mux.Vars(r))
+	_ = pathParams
+
+	queryParams := r.URL.Query()
+	_ = queryParams
+
+	if TypeHealthStrArr, ok := queryParams["type"]; ok {
+		TypeHealthStr := TypeHealthStrArr[0]
+		TypeHealth := TypeHealthStr
+		req.Type = TypeHealth
+	}
+
+	return &req, err
+}
+
+// DecodeHTTPHealthOneRequest is a transport/http.DecodeRequestFunc that
+// decodes a JSON-encoded health request from the HTTP request
+// body. Primarily useful in a server.
+func DecodeHTTPHealthOneRequest(_ context.Context, r *http.Request) (interface{}, error) {
+	defer r.Body.Close()
+	var req pb.HealthRequest
+	buf, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot read body of http request")
+	}
+	if len(buf) > 0 {
+		// AllowUnknownFields stops the unmarshaler from failing if the JSON contains unknown fields.
+		unmarshaller := jsonpb.Unmarshaler{
+			AllowUnknownFields: true,
+		}
+		if err = unmarshaller.Unmarshal(bytes.NewBuffer(buf), &req); err != nil {
+			const size = 8196
+			if len(buf) > size {
+				buf = buf[:size]
+			}
+			return nil, httpError{errors.Wrapf(err, "request body '%s': cannot parse non-json request body", buf),
+				http.StatusBadRequest,
+				nil,
+			}
+		}
+	}
+
+	pathParams := encodePathParams(mux.Vars(r))
+	_ = pathParams
+
+	queryParams := r.URL.Query()
+	_ = queryParams
+
+	if TypeHealthStrArr, ok := queryParams["type"]; ok {
+		TypeHealthStr := TypeHealthStrArr[0]
+		TypeHealth := TypeHealthStr
+		req.Type = TypeHealth
 	}
 
 	return &req, err

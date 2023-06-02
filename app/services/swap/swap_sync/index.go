@@ -138,11 +138,13 @@ func (ctrl *SwapSync) runSyncByContract(contract *models.SwapContract) {
 	fmt.Printf("[%s] [%s] SwapSync runSyncByContract start chainID=%d \n", time.Now().Local().String(), contractName, chainID)
 	ctrl.wg.Add(1)
 	defer ctrl.wg.Done()
-	var startBlock, endBlock, stepBlock, pageNum uint64
+	var startBlock, endBlock, stepBlock, safeBlock, defaultSafeBlock, pageNum uint64
 	scanEndpoint := contract.Chain.ScanApi
 	scanApiKey := contract.Chain.ScanApiKey
 	startBlock = contract.SyncBlockNumber
 	stepBlock = 50
+	defaultSafeBlock = 10
+	safeBlock = defaultSafeBlock
 	offsetNum := ctrl.config.offsetNum
 	pageNum = 1
 	sort := "asc"
@@ -162,7 +164,7 @@ func (ctrl *SwapSync) runSyncByContract(contract *models.SwapContract) {
 		//maybeHasNextPage := false
 		//get txs by contract address
 		chainRecentBlockNumber, err := apiEthBlockNumber(ctx, scanEndpoint, scanApiKey)
-		fmt.Printf("[%s] SwapSync apiEthBlockNumber chainID=%d  contract=%s %d-%d\n", time.Now().Local().String(), chainID, address, contract.SyncBlockNumber, chainRecentBlockNumber)
+		//fmt.Printf("[%s] SwapSync apiEthBlockNumber chainID=%d  contract=%s %d-%d\n", time.Now().Local().String(), chainID, address, contract.SyncBlockNumber, chainRecentBlockNumber)
 		if err != nil {
 			fmt.Printf("[%s] SwapSync apiEthBlockNumber chainID=%d  contract=%s error:%s\n", time.Now().Local().String(), chainID, address, err.Error())
 			continue
@@ -171,7 +173,9 @@ func (ctrl *SwapSync) runSyncByContract(contract *models.SwapContract) {
 		if chainRecentBlockNumber <= contract.SyncBlockNumber {
 			continue
 		}
-		if startBlock == 0 || startBlock > chainRecentBlockNumber {
+		startBlock -= safeBlock
+		safeBlock = defaultSafeBlock
+		if startBlock <= 0 || startBlock > chainRecentBlockNumber {
 			startBlock = chainRecentBlockNumber
 		}
 		endBlock = startBlock + stepBlock
@@ -201,6 +205,7 @@ func (ctrl *SwapSync) runSyncByContract(contract *models.SwapContract) {
 				continue
 			}
 			fmt.Printf("[%s] SyncSwap runTaskChain chainID=%d  %d-%d Error: %s\n", time.Now().Local().String(), chainID, startBlock, endBlock, err.Error())
+			safeBlock = 0
 			continue
 		}
 		if txs == nil {

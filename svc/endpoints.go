@@ -42,6 +42,7 @@ type Endpoints struct {
 	SwapTradeEndpoint               endpoint.Endpoint
 	SwapQuoteEndpoint               endpoint.Endpoint
 	TestEndpoint                    endpoint.Endpoint
+	HealthEndpoint                  endpoint.Endpoint
 }
 
 // Endpoints
@@ -116,6 +117,14 @@ func (e Endpoints) Test(ctx context.Context, in *pb.TestRequest) (*pb.TestRespon
 		return nil, err
 	}
 	return response.(*pb.TestResponse), nil
+}
+
+func (e Endpoints) Health(ctx context.Context, in *pb.HealthRequest) (*pb.HealthResponse, error) {
+	response, err := e.HealthEndpoint(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return response.(*pb.HealthResponse), nil
 }
 
 // Make Endpoints
@@ -219,6 +228,17 @@ func MakeTestEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
 	}
 }
 
+func MakeHealthEndpoint(s pb.SwapsvcServer) endpoint.Endpoint {
+	return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(*pb.HealthRequest)
+		v, err := s.Health(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		return v, nil
+	}
+}
+
 // WrapAllExcept wraps each Endpoint field of struct Endpoints with a
 // go-kit/kit/endpoint.Middleware.
 // Use this for applying a set of middlewares to every endpoint in the service.
@@ -235,6 +255,7 @@ func (e *Endpoints) WrapAllExcept(middleware endpoint.Middleware, excluded ...st
 		"SwapTrade":               {},
 		"SwapQuote":               {},
 		"Test":                    {},
+		"Health":                  {},
 	}
 
 	for _, ex := range excluded {
@@ -272,6 +293,9 @@ func (e *Endpoints) WrapAllExcept(middleware endpoint.Middleware, excluded ...st
 		if inc == "Test" {
 			e.TestEndpoint = middleware(e.TestEndpoint)
 		}
+		if inc == "Health" {
+			e.HealthEndpoint = middleware(e.HealthEndpoint)
+		}
 	}
 }
 
@@ -295,6 +319,7 @@ func (e *Endpoints) WrapAllLabeledExcept(middleware func(string, endpoint.Endpoi
 		"SwapTrade":               {},
 		"SwapQuote":               {},
 		"Test":                    {},
+		"Health":                  {},
 	}
 
 	for _, ex := range excluded {
@@ -331,6 +356,9 @@ func (e *Endpoints) WrapAllLabeledExcept(middleware func(string, endpoint.Endpoi
 		}
 		if inc == "Test" {
 			e.TestEndpoint = middleware("Test", e.TestEndpoint)
+		}
+		if inc == "Health" {
+			e.HealthEndpoint = middleware("Health", e.HealthEndpoint)
 		}
 	}
 }

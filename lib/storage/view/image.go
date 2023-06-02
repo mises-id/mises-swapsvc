@@ -127,6 +127,9 @@ func (s *imageStorage) GetFileUrl(ctx context.Context, paths ...string) (map[str
 	return imageMap, nil
 }
 func (s *imageStorage) GetFileUrlOne(ctx context.Context, path string) (string, error) {
+	if path == "" {
+		return path, nil
+	}
 	if strings.HasPrefix(path, "http") {
 		return path, nil
 	}

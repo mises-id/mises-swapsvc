@@ -141,6 +141,16 @@ func New(instance string, options ...httptransport.ClientOption) (pb.SwapsvcServ
 			options...,
 		).Endpoint()
 	}
+	var HealthZeroEndpoint endpoint.Endpoint
+	{
+		HealthZeroEndpoint = httptransport.NewClient(
+			"GET",
+			copyURL(u, "/health/"),
+			EncodeHTTPHealthZeroRequest,
+			DecodeHTTPHealthResponse,
+			options...,
+		).Endpoint()
+	}
 
 	return svc.Endpoints{
 		SyncSwapOrderEndpoint:           SyncSwapOrderZeroEndpoint,
@@ -152,6 +162,7 @@ func New(instance string, options ...httptransport.ClientOption) (pb.SwapsvcServ
 		SwapTradeEndpoint:               SwapTradeZeroEndpoint,
 		SwapQuoteEndpoint:               SwapQuoteZeroEndpoint,
 		TestEndpoint:                    TestZeroEndpoint,
+		HealthEndpoint:                  HealthZeroEndpoint,
 	}, nil
 }
 
@@ -414,6 +425,33 @@ func DecodeHTTPTestResponse(_ context.Context, r *http.Response) (interface{}, e
 	}
 
 	var resp pb.TestResponse
+	if err = jsonpb.UnmarshalString(string(buf), &resp); err != nil {
+		return nil, errorDecoder(buf)
+	}
+
+	return &resp, nil
+}
+
+// DecodeHTTPHealthResponse is a transport/http.DecodeResponseFunc that decodes
+// a JSON-encoded HealthResponse response from the HTTP response body.
+// If the response has a non-200 status code, we will interpret that as an
+// error and attempt to decode the specific error message from the response
+// body. Primarily useful in a client.
+func DecodeHTTPHealthResponse(_ context.Context, r *http.Response) (interface{}, error) {
+	defer r.Body.Close()
+	buf, err := ioutil.ReadAll(r.Body)
+	if err == io.EOF {
+		return nil, errors.New("response http body empty")
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot read http body")
+	}
+
+	if r.StatusCode != http.StatusOK {
+		return nil, errors.Wrapf(errorDecoder(buf), "status code: '%d'", r.StatusCode)
+	}
+
+	var resp pb.HealthResponse
 	if err = jsonpb.UnmarshalString(string(buf), &resp); err != nil {
 		return nil, errorDecoder(buf)
 	}
@@ -1153,6 +1191,77 @@ func EncodeHTTPTestOneRequest(_ context.Context, r *http.Request, request interf
 	path := strings.Join([]string{
 		"",
 		"test",
+	}, "/")
+	u, err := url.Parse(path)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
+	}
+	r.URL.RawPath = u.RawPath
+	r.URL.Path = u.Path
+
+	// Set the query parameters
+	values := r.URL.Query()
+	var tmp []byte
+	_ = tmp
+
+	values.Add("type", fmt.Sprint(req.Type))
+
+	r.URL.RawQuery = values.Encode()
+	return nil
+}
+
+// EncodeHTTPHealthZeroRequest is a transport/http.EncodeRequestFunc
+// that encodes a health request into the various portions of
+// the http request (path, query, and body).
+func EncodeHTTPHealthZeroRequest(_ context.Context, r *http.Request, request interface{}) error {
+	strval := ""
+	_ = strval
+	req := request.(*pb.HealthRequest)
+	_ = req
+
+	r.Header.Set("transport", "HTTPJSON")
+	r.Header.Set("request-url", r.URL.Path)
+
+	// Set the path parameters
+	path := strings.Join([]string{
+		"",
+		"health",
+		"",
+	}, "/")
+	u, err := url.Parse(path)
+	if err != nil {
+		return errors.Wrapf(err, "couldn't unmarshal path %q", path)
+	}
+	r.URL.RawPath = u.RawPath
+	r.URL.Path = u.Path
+
+	// Set the query parameters
+	values := r.URL.Query()
+	var tmp []byte
+	_ = tmp
+
+	values.Add("type", fmt.Sprint(req.Type))
+
+	r.URL.RawQuery = values.Encode()
+	return nil
+}
+
+// EncodeHTTPHealthOneRequest is a transport/http.EncodeRequestFunc
+// that encodes a health request into the various portions of
+// the http request (path, query, and body).
+func EncodeHTTPHealthOneRequest(_ context.Context, r *http.Request, request interface{}) error {
+	strval := ""
+	_ = strval
+	req := request.(*pb.HealthRequest)
+	_ = req
+
+	r.Header.Set("transport", "HTTPJSON")
+	r.Header.Set("request-url", r.URL.Path)
+
+	// Set the path parameters
+	path := strings.Join([]string{
+		"",
+		"health",
 	}, "/")
 	u, err := url.Parse(path)
 	if err != nil {

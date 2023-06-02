@@ -85,6 +85,14 @@ rpc Test (TestRequest) returns (TestResponse) {
     }
   };
 }
+rpc Health (HealthRequest) returns (HealthResponse) {
+  option (google.api.http) = {
+    get: "/health"
+    additional_bindings {
+      get: "/health/"
+    }
+  };
+}
 
 }
 
@@ -104,6 +112,12 @@ message TestRequest {
  string type = 1;
 }
 message TestResponse {
+  uint64 code = 1;
+}
+message HealthRequest {
+ string type = 1;
+}
+message HealthResponse {
   uint64 code = 1;
 }
 message SyncSwapOrderRequest {

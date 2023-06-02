@@ -8,6 +8,7 @@ import (
 
 	"github.com/mises-id/mises-swapsvc/app/models/enum"
 	"github.com/mises-id/mises-swapsvc/lib/db"
+	"github.com/mises-id/mises-swapsvc/lib/storage/view"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -27,6 +28,7 @@ type (
 		Status    enum.StatusType    `bson:"status" bson:"status"`
 		Token     `bson:"inline"`
 		Key       string    `bson:"key" json:"key"`
+		Logo      string    `bson:"logo" json:"logo"`
 		UpdatedAt time.Time `bson:"updated_at"`
 		CreatedAt time.Time `bson:"created_at"`
 	}
@@ -95,6 +97,14 @@ func ListSwapToken(ctx context.Context, params IAdminParams) ([]*SwapToken, erro
 }
 
 func preloadSwapToken(ctx context.Context, lists ...*SwapToken) error {
+	for _, v := range lists {
+		if v.Logo != "" {
+			vlogo, err := view.ImageClient.GetFileUrlOne(ctx, v.Logo)
+			if err == nil {
+				v.LogoURI = vlogo
+			}
+		}
+	}
 
 	return nil
 }

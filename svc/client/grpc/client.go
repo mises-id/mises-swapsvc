@@ -153,6 +153,19 @@ func New(conn *grpc.ClientConn, options ...ClientOption) (pb.SwapsvcServer, erro
 		).Endpoint()
 	}
 
+	var healthEndpoint endpoint.Endpoint
+	{
+		healthEndpoint = grpctransport.NewClient(
+			conn,
+			"swapsvc.Swapsvc",
+			"Health",
+			EncodeGRPCHealthRequest,
+			DecodeGRPCHealthResponse,
+			pb.HealthResponse{},
+			clientOptions...,
+		).Endpoint()
+	}
+
 	return svc.Endpoints{
 		SyncSwapOrderEndpoint:           syncswaporderEndpoint,
 		SwapOrderPageEndpoint:           swaporderpageEndpoint,
@@ -163,6 +176,7 @@ func New(conn *grpc.ClientConn, options ...ClientOption) (pb.SwapsvcServer, erro
 		SwapTradeEndpoint:               swaptradeEndpoint,
 		SwapQuoteEndpoint:               swapquoteEndpoint,
 		TestEndpoint:                    testEndpoint,
+		HealthEndpoint:                  healthEndpoint,
 	}, nil
 }
 
@@ -231,6 +245,13 @@ func DecodeGRPCTestResponse(_ context.Context, grpcReply interface{}) (interface
 	return reply, nil
 }
 
+// DecodeGRPCHealthResponse is a transport/grpc.DecodeResponseFunc that converts a
+// gRPC health reply to a user-domain health response. Primarily useful in a client.
+func DecodeGRPCHealthResponse(_ context.Context, grpcReply interface{}) (interface{}, error) {
+	reply := grpcReply.(*pb.HealthResponse)
+	return reply, nil
+}
+
 // GRPC Client Encode
 
 // EncodeGRPCSyncSwapOrderRequest is a transport/grpc.EncodeRequestFunc that converts a
@@ -293,6 +314,13 @@ func EncodeGRPCSwapQuoteRequest(_ context.Context, request interface{}) (interfa
 // user-domain test request to a gRPC test request. Primarily useful in a client.
 func EncodeGRPCTestRequest(_ context.Context, request interface{}) (interface{}, error) {
 	req := request.(*pb.TestRequest)
+	return req, nil
+}
+
+// EncodeGRPCHealthRequest is a transport/grpc.EncodeRequestFunc that converts a
+// user-domain health request to a gRPC health request. Primarily useful in a client.
+func EncodeGRPCHealthRequest(_ context.Context, request interface{}) (interface{}, error) {
+	req := request.(*pb.HealthRequest)
 	return req, nil
 }
 

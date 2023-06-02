@@ -5,7 +5,6 @@ import (
 	"github.com/mises-id/mises-swapsvc/app/factory"
 	"github.com/mises-id/mises-swapsvc/app/models/search"
 	"github.com/mises-id/mises-swapsvc/app/services/swap"
-	"github.com/mises-id/mises-swapsvc/lib/codes"
 	"github.com/mises-id/mises-swapsvc/lib/pagination"
 	pb "github.com/mises-id/mises-swapsvc/proto"
 )
@@ -128,7 +127,7 @@ func (s swapsvcService) ListSwapToken(ctx context.Context, in *pb.ListSwapTokenR
 	var resp pb.ListSwapTokenResponse
 	//check input parameters
 	if in.ChainID <= 0 {
-		return nil, codes.ErrInvalidArgument.New("chainID required")
+		//return nil, codes.ErrInvalidArgument.New("chainID required")
 	}
 	params := &search.SwapTokenSearch{
 		ChainID: in.ChainID,
@@ -235,6 +234,12 @@ func (s swapsvcService) Test(ctx context.Context, in *pb.TestRequest) (*pb.TestR
 	if err != nil {
 		return nil, err
 	}
+	resp.Code = 0
+	return &resp, nil
+}
+
+func (s swapsvcService) Health(ctx context.Context, in *pb.HealthRequest) (*pb.HealthResponse, error) {
+	var resp pb.HealthResponse
 	resp.Code = 0
 	return &resp, nil
 }

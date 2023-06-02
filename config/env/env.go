@@ -25,6 +25,7 @@ type Env struct {
 	StorageSalt         string  `env:"STORAGE_SALT" envDefault:""`
 	SwapReferrerAddress string  `env:"SwapReferrerAddress" envDefault:""`
 	SwapFee             float32 `env:"Swap_Fee" envDefault:"0"`
+	SyncSwapOrderMode   string  `env:"SYNC_SWAP_ORDER_MODE" envDefault:"close"`
 	RootPath            string
 }
 
