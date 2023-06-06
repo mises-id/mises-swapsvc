@@ -33,6 +33,7 @@ func NewSwapToken(data *models.SwapToken) *pb.Token {
 		LogoUri:  data.LogoURI,
 		Decimals: int32(data.Decimals),
 		Symbol:   data.Symbol,
+		ChainID:  data.ChainID,
 	}
 	return &resp
 }
