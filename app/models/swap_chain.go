@@ -17,6 +17,7 @@ type (
 		MoralisKey      string             `bson:"moralis_key" json:"moralis_key"`
 		RPCAddress      string             `bson:"rpc_address" json:"rpc_address"`
 		SyncBlockNumber uint64             `bson:"sync_block_number"`
+		ScanURL         string             `bson:"scan_url" json:"scan_url"`
 		ScanApi         string             `bson:"scan_api" json:"scan_api"`
 		ScanApiKey      string             `bson:"scan_api_key" json:"scan_api_key"`
 		Status          int                `bson:"status"`

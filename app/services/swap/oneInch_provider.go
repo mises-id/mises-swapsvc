@@ -25,6 +25,13 @@ type (
 		providerInfo    *models.SwapProvider
 		ctx             context.Context
 		config          *OneInchProviderConfig
+		protocols       map[uint64][]*OneInchProtocols
+	}
+	OneInchProtocols struct {
+		ID string `json:"id"`
+	}
+	OneInchProtocolsResponse struct {
+		Protocols []*OneInchProtocols `json:"protocols"`
 	}
 )
 
@@ -33,6 +40,7 @@ func NewOneInchProvider() *OneInchProvider {
 		key:             oneInchProviderKey,
 		ctx:             context.TODO(),
 		swapContractMap: map[uint64]*models.SwapContract{},
+		protocols:       map[uint64][]*OneInchProtocols{},
 	}
 	config := &OneInchProviderConfig{
 		minSlippage:      0,
@@ -200,7 +208,7 @@ func (p *OneInchProvider) swapQuote(ctx context.Context, in *SwapQuoteInput) *Sw
 		resp.Error = ErrUnspportChainID
 		return resp
 	}
-	data, err := apiSwapQuoteByOneInchProvider(ctx, in)
+	data, err := p.apiSwapQuoteByOneInchProvider(ctx, in)
 	resp.FetchTime = int64(time.Since(st).Milliseconds())
 	if err != nil {
 		resp.Error = err.Error()
@@ -277,7 +285,8 @@ func (p *OneInchProvider) apiSwapTradeByOneInchProvider(ctx context.Context, in 
 	if slippage > p.config.maxSlippage {
 		slippage = p.config.maxSlippage
 	}
-	api := fmt.Sprintf("%s/%d/swap?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fromAddress=%s&destReceiver=%s&slippage=%.3f&referrerAddress=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, in.FromAddress, in.DestReceiver, slippage, address, swapFee)
+	protocols := p.getProtocolsByChainID(in.ChainID)
+	api := fmt.Sprintf("%s/%d/swap?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fromAddress=%s&destReceiver=%s&slippage=%.3f&referrerAddress=%s&fee=%.3f&protocols=%s", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, in.FromAddress, in.DestReceiver, slippage, address, swapFee, protocols)
 	transport := &http.Transport{Proxy: setProxy()}
 	client := &http.Client{Transport: transport}
 	client.Timeout = time.Second * 3
@@ -303,8 +312,9 @@ func (p *OneInchProvider) apiSwapTradeByOneInchProvider(ctx context.Context, in 
 	return out, nil
 }
 
-func apiSwapQuoteByOneInchProvider(ctx context.Context, in *SwapQuoteInput) (*oneInchQuoteResponse, error) {
-	api := fmt.Sprintf("%s/%d/quote?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fee=%.3f", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, swapFee)
+func (p *OneInchProvider) apiSwapQuoteByOneInchProvider(ctx context.Context, in *SwapQuoteInput) (*oneInchQuoteResponse, error) {
+	protocols := p.getProtocolsByChainID(in.ChainID)
+	api := fmt.Sprintf("%s/%d/quote?fromTokenAddress=%s&toTokenAddress=%s&amount=%s&fee=%.3f&protocols=%s", oneIncheProviderAPIBaseURL, in.ChainID, in.FromTokenAddress, in.ToTokenAddress, in.Amount, swapFee, protocols)
 	transport := &http.Transport{Proxy: setProxy()}
 	client := &http.Client{Transport: transport}
 	client.Timeout = time.Second * 3
@@ -326,6 +336,62 @@ func apiSwapQuoteByOneInchProvider(ctx context.Context, in *SwapQuoteInput) (*on
 	}
 	body, _ := ioutil.ReadAll(resp.Body)
 	out := &oneInchQuoteResponse{}
+	json.Unmarshal(body, out)
+	return out, nil
+}
+
+func (p *OneInchProvider) getProtocolsByChainID(chainID uint64) (protocols string) {
+	return protocols
+	switch chainID {
+	case 56:
+		chainProtocols, ok := p.protocols[chainID]
+		if !ok {
+			protocolResp, _ := p.apiGetProtocolsByChainID(chainID)
+			if protocolResp != nil {
+				chainProtocols = protocolResp.Protocols
+				p.protocols[chainID] = chainProtocols
+			}
+		}
+		excludes := map[string]string{
+			"BSC_ONE_INCH_LIMIT_ORDER": "BSC_ONE_INCH_LIMIT_ORDER",
+		}
+		for _, protocol := range chainProtocols {
+			_, isExclude := excludes[protocol.ID]
+			if isExclude {
+				continue
+			}
+			if protocols == "" {
+				protocols = protocol.ID
+			} else {
+				protocols += "," + protocol.ID
+			}
+		}
+		return protocols
+	default:
+		return protocols
+	}
+}
+
+func (p *OneInchProvider) apiGetProtocolsByChainID(chainID uint64) (*OneInchProtocolsResponse, error) {
+	api := fmt.Sprintf("%s/%d/liquidity-sources", oneIncheProviderAPIBaseURL, chainID)
+	transport := &http.Transport{Proxy: setProxy()}
+	client := &http.Client{Transport: transport}
+	client.Timeout = time.Second * 3
+	req, err := http.NewRequest("GET", api, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Close = true
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+	body, _ := ioutil.ReadAll(resp.Body)
+	out := &OneInchProtocolsResponse{}
 	json.Unmarshal(body, out)
 	return out, nil
 }
