@@ -3,7 +3,6 @@ package swap
 import (
 	"context"
 
-	"github.com/mises-id/mises-swapsvc/app/models"
 	"github.com/mises-id/mises-swapsvc/app/services/swap/swap_sync"
 	"github.com/mises-id/mises-swapsvc/config/env"
 )
