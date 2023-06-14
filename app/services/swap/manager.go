@@ -3,6 +3,7 @@ package swap
 import (
 	"context"
 
+	"github.com/mises-id/mises-swapsvc/app/models"
 	"github.com/mises-id/mises-swapsvc/app/services/swap/swap_sync"
 	"github.com/mises-id/mises-swapsvc/config/env"
 )
@@ -31,10 +32,11 @@ func SyncSwapOrder(ctx context.Context) error {
 }
 
 func InitSwap(ctx context.Context) error {
-	/* UpdateSwapChain(ctx)
+	/* return UpdateSwapTokenDecimals(ctx)
+	models.EnsureIndex()
+	UpdateSwapChain(ctx)
 	UpdateSwapContract(ctx)
 	UpdateSwapToken(ctx)
-	UpdateSwapProvider(ctx)
-	models.EnsureIndex() */
+	UpdateSwapProvider(ctx) */
 	return nil
 }

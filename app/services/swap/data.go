@@ -129,6 +129,33 @@ func runUpdateSwapToken(ctx context.Context) error {
 	return models.CreateSwapTokenMany(ctx, lists)
 }
 
+func UpdateSwapTokenDecimals(ctx context.Context) error {
+	localToken, err := getSwapTokenByJSON()
+	if err != nil {
+		return err
+	}
+	params := &search.SwapTokenSearch{
+		Decimals: 100001,
+	}
+	list, err := models.ListSwapToken(ctx, params)
+	if err != nil {
+		return err
+	}
+	for _, token := range list {
+		for _, local := range localToken {
+			if token.ChainID == local.ChainID && token.Address == local.Address {
+				token.Decimals = local.Decimals
+				if err := models.UpdateSwapTokenDecimals(ctx, token); err != nil {
+					fmt.Printf("[%s]Error UpdateSwapTokenDecimals: %s\n", token.Address, err.Error())
+				} else {
+					fmt.Printf("[%s]UpdateSwapTokenDecimals Success\n", token.Address)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 func getSwapTokenByJSON() ([]*models.SwapToken, error) {
 	//local json
 	localfile := path.Join("./assets/swap/tokens.json")
@@ -150,7 +177,7 @@ func getSwapTokenByJSON() ([]*models.SwapToken, error) {
 func UpdateSwapContract(ctx context.Context) error {
 	err := runUpdateSwapContract(ctx)
 	if err != nil {
-		fmt.Printf("Error updating contract list: %s", err.Error())
+		fmt.Printf("Error updating contract list: %s\n", err.Error())
 		return err
 	}
 	return nil
@@ -185,7 +212,7 @@ func getSwapContractByJSON() ([]*models.SwapContract, error) {
 func UpdateSwapProvider(ctx context.Context) error {
 	err := runUpdateSwapProvider(ctx)
 	if err != nil {
-		fmt.Printf("Error updating contract list: %s", err.Error())
+		fmt.Printf("Error updating contract list: %s\n", err.Error())
 		return err
 	}
 	return nil

@@ -29,6 +29,7 @@ type (
 )
 
 func EnsureIndex() {
+	tokenIndexName := "uniqueChainAndAddress"
 	opts := options.CreateIndexes().SetMaxTime(20 * time.Second)
 	trueBool := true
 	_, err := db.DB().Collection("swapcontracts").Indexes().CreateMany(context.Background(), []mongo.IndexModel{
@@ -55,6 +56,7 @@ func EnsureIndex() {
 			},
 			Options: &options.IndexOptions{
 				Unique: &trueBool,
+				Name:   &tokenIndexName,
 			},
 		},
 	}, opts)
@@ -79,6 +81,20 @@ func EnsureIndex() {
 	_, err = db.DB().Collection("swapchains").Indexes().CreateMany(context.Background(), []mongo.IndexModel{
 		{
 			Keys: bson.M{"chain_id": 1},
+			Options: &options.IndexOptions{
+				Unique: &trueBool,
+			},
+		},
+	}, opts)
+	if err != nil {
+		logrus.Debug(err)
+	}
+	if err != nil {
+		logrus.Debug(err)
+	}
+	_, err = db.DB().Collection("swapproviders").Indexes().CreateMany(context.Background(), []mongo.IndexModel{
+		{
+			Keys: bson.M{"key": 1},
 			Options: &options.IndexOptions{
 				Unique: &trueBool,
 			},

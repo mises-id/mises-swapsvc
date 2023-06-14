@@ -7,6 +7,7 @@ import (
 	"github.com/mises-id/mises-swapsvc/lib/db"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type (
@@ -61,7 +62,11 @@ func CreateSwapChainMany(ctx context.Context, data []*SwapChain) error {
 		v.Status = 1
 		in = append(in, v)
 	}
-	_, err := db.DB().Collection("swapchains").InsertMany(ctx, in)
+	ordered := false
+	opts := &options.InsertManyOptions{
+		Ordered: &ordered,
+	}
+	_, err := db.DB().Collection("swapchains").InsertMany(ctx, in, opts)
 
 	return err
 }

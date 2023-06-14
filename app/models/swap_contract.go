@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type (
@@ -60,10 +61,14 @@ func CreateSwapContractMany(ctx context.Context, data []*SwapContract) error {
 	var in []interface{}
 	for _, v := range data {
 		v.BeforeCreate(ctx)
-		v.Status = 1
+		v.Status = 2
 		in = append(in, v)
 	}
-	_, err := db.DB().Collection("swapcontracts").InsertMany(ctx, in)
+	ordered := false
+	opts := &options.InsertManyOptions{
+		Ordered: &ordered,
+	}
+	_, err := db.DB().Collection("swapcontracts").InsertMany(ctx, in, opts)
 
 	return err
 }

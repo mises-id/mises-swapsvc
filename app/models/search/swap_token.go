@@ -9,9 +9,10 @@ import (
 
 type (
 	SwapTokenSearch struct {
-		ID      primitive.ObjectID
-		ChainID uint64
-		Address string
+		ID       primitive.ObjectID
+		ChainID  uint64
+		Address  string
+		Decimals int
 		//sort
 		//limit
 		ListNum int64
@@ -32,6 +33,13 @@ func (params *SwapTokenSearch) BuildAdminSearch(chain *odm.DB) *odm.DB {
 	}
 	if params.Address != "" {
 		chain = chain.Where(bson.M{"address": params.Address})
+	}
+	if params.Decimals > 0 {
+		maxDecimals := 10000
+		if params.Decimals > maxDecimals {
+			params.Decimals = 0
+		}
+		chain = chain.Where(bson.M{"decimals": params.Decimals})
 	}
 	//sort
 	chain = chain.Sort(bson.M{"sort_num": -1})

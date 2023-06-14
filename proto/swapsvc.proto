@@ -243,10 +243,13 @@ message SwapQuoteInfo {
   string to_token_amount = 7;
   string error = 8;
   int64 fetch_time = 9;
+  float compare_percent = 10;
 }
 message SwapQuoteResponse {
   uint64 code = 1;
-  repeated SwapQuoteInfo data = 2;
+  repeated SwapQuoteInfo all_quote = 2;
+  SwapQuoteInfo best_quote = 3;
+  string error = 4;
 }
 message SwapTradesRequest {
   uint64 chainID = 1;

@@ -4,55 +4,7 @@ import (
 	"context"
 
 	"github.com/mises-id/mises-swapsvc/app/models"
-	"github.com/mises-id/mises-swapsvc/app/models/search"
 	"github.com/mises-id/mises-swapsvc/lib/pagination"
-)
-
-type (
-	SwapOrderInput struct {
-		*search.SwapOrderSearch
-	}
-	SwapTokenInput struct {
-		*search.SwapTokenSearch
-	}
-	GetSwapApproveAllowanceInput struct {
-		ChainID           uint64
-		AggregatorAddress string
-		TokenAddress      string
-		WalletAddress     string
-	}
-	GetSwapApproveAllowanceOutput struct {
-		Allowance string
-	}
-	ApproveSwapTransactionInput struct {
-		ChainID           uint64
-		AggregatorAddress string
-		TokenAddress      string
-		Amount            string
-	}
-	ApproveSwapTransactionOutput struct {
-		Data, To, GasPrice, Value string
-	}
-	SwapTradeInput struct {
-		ChainID           uint64
-		FromAddress       string
-		FromTokenAddress  string
-		ToTokenAddress    string
-		Amount            string
-		Slippage          float32
-		DestReceiver      string
-		AggregatorAddress string
-	}
-	SwapQuoteInput struct {
-		ChainID          uint64
-		FromTokenAddress string
-		ToTokenAddress   string
-		Amount           string
-	}
-
-	SwapController struct {
-		providers map[string]Provider
-	}
 )
 
 var (
@@ -68,6 +20,11 @@ func NewSwapController() *SwapController {
 	oneProvider := NewOneInchProvider()
 	if oneProvider != nil {
 		providers[oneProvider.Key()] = oneProvider
+	}
+	// okx provider
+	okxProvider := NewOkxProvider()
+	if okxProvider != nil {
+		providers[okxProvider.Key()] = okxProvider
 	}
 	swapCtrlEntity = &SwapController{providers: providers}
 	return swapCtrlEntity
@@ -87,9 +44,13 @@ func SwapTrade(ctx context.Context, in *SwapTradeInput) (*SwapTradeInfo, error) 
 	ctrl := NewSwapController()
 	return ctrl.swapTrade(ctx, in)
 }
-func SwapQuote(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
+func SwapQuote(ctx context.Context, in *SwapQuoteInput) (*SwapQuoteOutput, error) {
 	ctrl := NewSwapController()
-	return ctrl.swapQuote(ctx, in)
+	res, err := ctrl.swapQuote(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 // PageWebsite

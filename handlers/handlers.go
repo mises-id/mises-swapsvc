@@ -192,7 +192,9 @@ func (s swapsvcService) SwapQuote(ctx context.Context, in *pb.SwapQuoteRequest) 
 		return nil, err
 	}
 	resp.Code = 0
-	resp.Data = buildSwapQuoteSlice(data)
+	resp.AllQuote = buildSwapQuoteSlice(data.AllQuote)
+	resp.BestQuote = buildSwapQuoteInfo(data.BestQuote)
+	resp.Error = data.Error
 	return &resp, nil
 }
 func buildSwapQuoteSlice(data []*swap.SwapQuoteInfo) []*pb.SwapQuoteInfo {
@@ -216,6 +218,7 @@ func buildSwapQuoteInfo(data *swap.SwapQuoteInfo) *pb.SwapQuoteInfo {
 		Fee:              data.Fee,
 		FetchTime:        data.FetchTime,
 		EstimateGasFee:   data.EstimateGasFee,
+		ComparePercent:   data.ComparePercent,
 	}
 	if data.Aggregator != nil {
 		resp.Aggregator = &pb.Aggregator{

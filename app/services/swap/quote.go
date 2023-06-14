@@ -2,23 +2,15 @@ package swap
 
 import (
 	"context"
+	"math/big"
+	"sort"
+	"strconv"
 	"sync"
 
 	"github.com/mises-id/mises-swapsvc/lib/codes"
 )
 
 type (
-	SwapQuoteInfo struct {
-		Aggregator       *Aggregator `json:"aggregator"`       //聚合器信息
-		FromTokenAddress string      `json:"fromTokenAddress"` //swap发起询价的token地址
-		ToTokenAddress   string      `json:"toTokenAddress"`   //swap目标token
-		FromTokenAmount  string      `json:"fromTokenAmount"`  //swap发起询价token的数目
-		ToTokenAmount    string      `json:"toTokenAmount"`    //swap目标token的数目
-		Fee              float32     `json:"fee"`              //收取的佣金百分比，FromTokenAmount令牌数量的这个百分比将被发送到 referrerAddress，其余部分将用作交换的输入
-		EstimateGasFee   string      `json:"estimateGasFee"`
-		Error            string      `json:"error"`
-		FetchTime        int64       `json:"fetch_time"` //
-	}
 	oneInchQuoteResponse struct {
 		StatusCode     string     `json:"statusCode"`
 		Error          string     `json:"error"`
@@ -29,11 +21,27 @@ type (
 	}
 )
 
-func (c *SwapController) swapQuote(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
+func (c *SwapController) swapQuote(ctx context.Context, in *SwapQuoteInput) (*SwapQuoteOutput, error) {
 	// check input parameters
 	if err := checkSwapQuoteInput(in); err != nil {
 		return nil, err
 	}
+	// get quotes
+	quotes, err := c.getSwapQuotes(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+	resp := &SwapQuoteOutput{}
+	if len(quotes) == 0 {
+		resp.Error = ErrorNotFoundQuote
+	}
+	validQuotes, bestQuote := c.getValidQuotesAndBestQuote(ctx, quotes)
+	resp.AllQuote = validQuotes
+	resp.BestQuote = bestQuote
+	return resp, nil
+}
+
+func (c *SwapController) getSwapQuotes(ctx context.Context, in *SwapQuoteInput) ([]*SwapQuoteInfo, error) {
 	wg := &sync.WaitGroup{}
 	checkTask := make(chan int)
 	totalTask := len(c.providers)
@@ -51,12 +59,76 @@ func (c *SwapController) swapQuote(ctx context.Context, in *SwapQuoteInput) ([]*
 				checkTask <- 1
 			}()
 			//run
-			quote := provider.SwapQuote(ctx, in)
-			quotes = append(quotes, quote)
+			quote := provider.SwapQuotes(ctx, in)
+			quotes = append(quotes, quote...)
 		}(provider)
 	}
 	wg.Wait()
 	return quotes, nil
+}
+
+func (c *SwapController) getValidQuotesAndBestQuote(ctx context.Context, quotes []*SwapQuoteInfo) (validQuotes []*SwapQuoteInfo, bestQuote *SwapQuoteInfo) {
+	if quotes == nil || len(quotes) == 0 {
+		return nil, nil
+	}
+	var worstQuote *SwapQuoteInfo
+	validQuotes = make([]*SwapQuoteInfo, 0)
+	//get best quote
+	for _, quote := range quotes {
+		//check
+		if quote.Error != "" || quote.ToTokenAmount == "" {
+			continue
+		}
+		validQuotes = append(validQuotes, quote)
+		toTokenAmount, _ := new(big.Int).SetString(quote.ToTokenAmount, 10)
+		if bestQuote == nil {
+			bestQuote = quote
+			worstQuote = quote
+			continue
+		}
+		tempToTokenAmount, _ := new(big.Int).SetString(bestQuote.ToTokenAmount, 10)
+		if toTokenAmount.Cmp(tempToTokenAmount) == 1 {
+			bestQuote = quote
+		}
+		if toTokenAmount.Cmp(tempToTokenAmount) == -1 {
+			worstQuote = quote
+		}
+	}
+	//best compare percent
+	if bestQuote != nil {
+		bestQuote.ComparePercent = compareQuotePercent(bestQuote, worstQuote)
+	}
+	//valid quotes
+	for _, quote := range quotes {
+		if quote.Error != "" || quote.ToTokenAmount == "" {
+			quote.ComparePercent = -100
+			continue
+		}
+		if quote != bestQuote {
+			quote.ComparePercent = compareQuotePercent(quote, bestQuote)
+		}
+	}
+	sort.Slice(quotes, func(i, j int) bool {
+		return quotes[i].ComparePercent > quotes[j].ComparePercent
+	})
+	return quotes, bestQuote
+}
+
+func compareQuotePercent(source *SwapQuoteInfo, dest *SwapQuoteInfo) (comparePercent float32) {
+	if source != nil && dest != nil && (dest.ToTokenAmount != "" && dest.ToTokenAmount != "0") && (source.ToTokenAmount != "" && source.ToTokenAmount != "0") {
+		bestToTokenAmount, _ := new(big.Float).SetString(source.ToTokenAmount)
+		worstToTokenAmount, _ := new(big.Float).SetString(dest.ToTokenAmount)
+		if source.ToTokenAmount != dest.ToTokenAmount {
+			var overAmount, comparePercentBig *big.Float
+			overAmount = big.NewFloat(10)
+			overAmount = overAmount.Sub(bestToTokenAmount, worstToTokenAmount)
+			comparePercentBig = overAmount.Quo(overAmount, worstToTokenAmount)
+			comparePercentStr := comparePercentBig.String()
+			comparePercent64, _ := strconv.ParseFloat(comparePercentStr, 10)
+			comparePercent = float32(comparePercent64) * 100
+		}
+	}
+	return comparePercent
 }
 
 func (c *SwapController) checkTask(taskNum int, ck chan int, wg *sync.WaitGroup) {

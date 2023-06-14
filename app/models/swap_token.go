@@ -11,6 +11,7 @@ import (
 	"github.com/mises-id/mises-swapsvc/lib/storage/view"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 type (
@@ -72,8 +73,20 @@ func CreateSwapTokenMany(ctx context.Context, data []*SwapToken) error {
 		v.Status = 1
 		in = append(in, v)
 	}
-	_, err := db.DB().Collection("swaptokens").InsertMany(ctx, in)
+	ordered := false
+	opts := &options.InsertManyOptions{
+		Ordered: &ordered,
+	}
+	_, err := db.DB().Collection("swaptokens").InsertMany(ctx, in, opts)
 
+	return err
+}
+
+func UpdateSwapTokenDecimals(ctx context.Context, token *SwapToken) error {
+
+	update := bson.M{}
+	update["decimals"] = token.Decimals
+	_, err := db.DB().Collection("swaptokens").UpdateByID(ctx, token.ID, bson.D{{Key: "$set", Value: update}})
 	return err
 }
 

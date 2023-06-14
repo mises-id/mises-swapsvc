@@ -21,12 +21,6 @@ type (
 	}
 )
 
-const (
-	oneInchProviderKey         = "1inch"
-	oKXProvider                = "okx"
-	oneIncheProviderAPIBaseURL = "https://api-mises.1inch.io/v5.0"
-)
-
 func (c *SwapController) getApproveAllowance(ctx context.Context, in *GetSwapApproveAllowanceInput) (*GetSwapApproveAllowanceOutput, error) {
 	//check input parameters
 	if err := checkApproveAllowanceInput(in); err != nil {
