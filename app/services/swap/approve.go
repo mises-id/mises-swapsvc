@@ -9,22 +9,20 @@ import (
 	"github.com/mises-id/mises-swapsvc/lib/codes"
 )
 
-type (
-	oneIncheGetApproveAllowanceResponse struct {
-		Allowance string `json:"allowance"`
-	}
-	oneIncheApproveTransactionResponse struct {
-		Data     string `json:"data"`
-		To       string `json:"to"`
-		GasPrice string `json:"gasPrice"`
-		Value    string `json:"value"`
-	}
-)
+type ()
 
 func (c *SwapController) getApproveAllowance(ctx context.Context, in *GetSwapApproveAllowanceInput) (*GetSwapApproveAllowanceOutput, error) {
+
 	//check input parameters
 	if err := checkApproveAllowanceInput(in); err != nil {
 		return nil, err
+	}
+	//native token
+	if in.TokenAddress == NativeTokenAddress {
+		res := &GetSwapApproveAllowanceOutput{
+			Allowance: MaxApproveAllowance,
+		}
+		return res, nil
 	}
 	provider, err := c.findProviderByChainIDAndAddress(ctx, in.ChainID, in.AggregatorAddress)
 	if err != nil {
@@ -68,6 +66,10 @@ func checkApproveTransactionInput(in *ApproveSwapTransactionInput) error {
 	}
 	if in.TokenAddress == "" {
 		return codes.ErrInvalidArgument.New("Invaild tokenAddress")
+	}
+	if in.Amount == "" || in.Amount == "0" {
+		in.Amount = MaxApproveAllowance
+		//return codes.ErrInvalidArgument.New("Invaild Amount")
 	}
 	in.AggregatorAddress = strings.ToLower(in.AggregatorAddress)
 	return nil

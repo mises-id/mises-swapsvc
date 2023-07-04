@@ -25,7 +25,7 @@ type (
 		Amount            string
 	}
 	ApproveSwapTransactionOutput struct {
-		Data, To, GasPrice, Value string
+		Data, To, GasPrice, Value, GasLimit string
 	}
 	SwapTradeInput struct {
 		ChainID           uint64
@@ -63,6 +63,7 @@ type (
 	SwapController struct {
 		providers map[string]Provider
 	}
+	//1inch
 	OneIncheSwapQuoteParams struct {
 		ChainID          uint64
 		FromTokenAddress string
@@ -70,5 +71,15 @@ type (
 		Amount           string
 		Protocols        string
 		SwapFee          float32
+	}
+
+	oneIncheGetApproveAllowanceResponse struct {
+		Allowance string `json:"allowance"`
+	}
+	oneIncheApproveTransactionResponse struct {
+		Data     string `json:"data"`
+		To       string `json:"to"`
+		GasPrice string `json:"gasPrice"`
+		Value    string `json:"value"`
 	}
 )

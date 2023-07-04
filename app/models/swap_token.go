@@ -37,12 +37,13 @@ type (
 
 func (u *SwapToken) BeforeCreate(ctx context.Context) error {
 	u.CreatedAt = time.Now()
+	u.Address = strings.ToLower(u.Address)
 	u.Key = getTokenKey(u.ChainID, u.Address)
 	return u.BeforeUpdate(ctx)
 }
 
 func getTokenKey(chainID uint64, address string) string {
-	return fmt.Sprintf("%d&%s", chainID, strings.ToLower(address))
+	return fmt.Sprintf("%d&%s", chainID, address)
 }
 
 func (u *SwapToken) BeforeUpdate(ctx context.Context) error {
@@ -87,6 +88,10 @@ func UpdateSwapTokenDecimals(ctx context.Context, token *SwapToken) error {
 	update := bson.M{}
 	update["decimals"] = token.Decimals
 	_, err := db.DB().Collection("swaptokens").UpdateByID(ctx, token.ID, bson.D{{Key: "$set", Value: update}})
+	return err
+}
+func DeleteSwapTokenByID(ctx context.Context, id primitive.ObjectID) error {
+	_, err := db.DB().Collection("swaptokens").DeleteOne(ctx, bson.M{"_id": id})
 	return err
 }
 

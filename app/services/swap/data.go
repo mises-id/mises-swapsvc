@@ -11,6 +11,7 @@ import (
 
 	"github.com/mises-id/mises-swapsvc/app/models"
 	"github.com/mises-id/mises-swapsvc/app/models/search"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type (
@@ -151,6 +152,29 @@ func UpdateSwapTokenDecimals(ctx context.Context) error {
 					fmt.Printf("[%s]UpdateSwapTokenDecimals Success\n", token.Address)
 				}
 			}
+		}
+	}
+	return nil
+}
+func DeleteRepeatSwapTokenWithAddress(ctx context.Context) error {
+	params := &search.SwapTokenSearch{}
+	list, err := models.ListSwapToken(ctx, params)
+	if err != nil {
+		return err
+	}
+	tempMap := make(map[string]primitive.ObjectID, 0)
+	for _, token := range list {
+		id, repeat := tempMap[token.Key]
+		tempMap[token.Key] = token.ID
+		if !repeat {
+			continue
+		}
+		//fmt.Println("repeat address: ", token.Address)
+		//continue
+		if err := models.DeleteSwapTokenByID(ctx, id); err != nil {
+			fmt.Printf("%s DeleteSwapTokenByID error: %s\n", id.String(), err.Error())
+		} else {
+			fmt.Printf("[%s]DeleteSwapTokenByID Success\n", id.String())
 		}
 	}
 	return nil

@@ -225,6 +225,7 @@ message ApproveSwapTransactionResponse{
   string to = 3;
   string gas_price = 4;
   string value = 5;
+  string gas_limit = 6;
 }
 
 message SwapQuoteRequest {

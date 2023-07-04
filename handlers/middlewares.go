@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/mises-id/mises-swapsvc/lib/codes"
@@ -87,6 +88,10 @@ func convertError() endpoint.Middleware {
 						grpccode = grpccodes.InvalidArgument
 					}
 					err = grpcstatus.Errorf(grpccode, code.Msg)
+				} else {
+					if strings.Contains(err.Error(), "Client.Timeout exceeded while awaiting headers") {
+						err = grpcstatus.Errorf(grpccodes.DeadlineExceeded, "Request timeout")
+					}
 				}
 			}
 			return ret, err

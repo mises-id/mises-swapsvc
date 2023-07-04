@@ -176,6 +176,7 @@ func (s swapsvcService) ApproveSwapTransaction(ctx context.Context, in *pb.Appro
 	resp.To = data.To
 	resp.GasPrice = data.GasPrice
 	resp.Value = data.Value
+	resp.GasLimit = data.GasLimit
 	return &resp, nil
 }
 

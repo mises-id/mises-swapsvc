@@ -28,19 +28,20 @@ type (
 	OkxGetApproveAllowanceResponse struct {
 		Code string `json:"code"`
 		Msg  string `json:"msg"`
-		Data *struct {
+		Data []*struct {
 			AllowanceAmount string `json:"allowanceAmount"`
 		} `json:"data"`
 	}
+	OkxApproveTransactionInfo struct {
+		Data               string `json:"data"`
+		DexContractAddress string `json:"dexContractAddress"`
+		GasLimit           string `json:"gasLimit"`
+		GasPrice           string `json:"gasPrice"`
+	}
 	OkxApproveTransactionResponse struct {
-		Code string `json:"code"`
-		Msg  string `json:"msg"`
-		Data *struct {
-			Data               string `json:"data"`
-			DexContractAddress string `json:"dexContractAddress"`
-			GasLimit           string `json:"gasLimit"`
-			GasPrice           string `json:"gasPrice"`
-		} `json:"data"`
+		Code string                       `json:"code"`
+		Msg  string                       `json:"msg"`
+		Data []*OkxApproveTransactionInfo `json:"data"`
 	}
 	OkxSwapQuoteData struct {
 		EstimateGasFee string `json:"estimateGasFee"`
@@ -56,12 +57,14 @@ type (
 		From     string `json:"from"`
 		To       string `json:"to"`
 		GasPrice string `json:"gasPrice"`
-		Gas      int64  `json:"gas"`
+		Gas      string `json:"gas"`
 		Value    string `json:"value"`
 	}
 	OkxSwapTradeData struct {
-		Tx            *OkxTx `json:"tx"`
-		ToTokenAmount string `json:"toTokenAmount"`
+		Tx           *OkxTx `json:"tx"`
+		RouterResult *struct {
+			ToTokenAmount string `json:"toTokenAmount"`
+		} `json:"routerResult"`
 	}
 	OkxSwapTradeResponse struct {
 		Code string              `json:"code"`
@@ -95,11 +98,16 @@ func (p *OkxProvider) getSwapApproveAllowance(ctx context.Context, in *GetSwapAp
 	if err != nil {
 		return nil, err
 	}
-	if data.Code != "0" || data.Data == nil {
+	if data.Code != "0" || data.Data == nil || len(data.Data) == 0 {
 		return nil, codes.ErrInvalidArgument.New(data.Msg)
 	}
+	allowance := data.Data[0]
+	allowanceAmount := allowance.AllowanceAmount
+	if allowanceAmount == "" {
+		allowanceAmount = "0"
+	}
 	res := &GetSwapApproveAllowanceOutput{
-		Allowance: data.Data.AllowanceAmount,
+		Allowance: allowanceAmount,
 	}
 	return res, nil
 }
@@ -114,13 +122,16 @@ func (p *OkxProvider) approveSwapTransaction(ctx context.Context, in *ApproveSwa
 	if err != nil {
 		return nil, err
 	}
-	if data.Code != "0" || data.Data == nil {
+	if data.Code != "0" || data.Data == nil || len(data.Data) == 0 {
 		return nil, codes.ErrInvalidArgument.New(data.Msg)
 	}
+	tx := data.Data[0]
 	res := &ApproveSwapTransactionOutput{
-		Data:     data.Data.Data,
-		GasPrice: data.Data.GasPrice,
-		To:       data.Data.DexContractAddress,
+		Data:     tx.Data,
+		GasPrice: tx.GasPrice,
+		To:       in.TokenAddress,
+		Value:    "0",
+		GasLimit: tx.GasLimit,
 	}
 	return res, nil
 }
@@ -213,14 +224,16 @@ func (p *OkxProvider) swapTrade(ctx context.Context, in *SwapTradeInput) *SwapTr
 		return resp
 	}
 	trade := data.Data[0]
-	resp.ToTokenAmount = trade.ToTokenAmount
+	if trade.RouterResult != nil {
+		resp.ToTokenAmount = trade.RouterResult.ToTokenAmount
+	}
 	if trade.Tx != nil {
 		resp.Trade = &Trade{
 			From:     trade.Tx.From,
 			To:       trade.Tx.To,
 			Data:     trade.Tx.Data,
 			GasPrice: trade.Tx.GasPrice,
-			GasLimit: fmt.Sprintf("%d", trade.Tx.Gas),
+			GasLimit: trade.Tx.Gas,
 			Value:    trade.Tx.Value,
 		}
 	}
