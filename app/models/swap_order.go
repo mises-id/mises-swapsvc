@@ -189,7 +189,7 @@ func preloadSwapOrder(ctx context.Context, lists ...*SwapOrder) error {
 		token := &Token{
 			Name:     v.Name,
 			Address:  v.Address,
-			LogoURI:  v.LogoURI,
+			LogoURI:  v.Logo,
 			Symbol:   v.Symbol,
 			Decimals: v.Decimals,
 		}
